@@ -10,11 +10,11 @@ class Grammar(Mapping):
 
     A grammar G is formally a 4-tuple: G = (V, T, P, S), where:
     - V is the set of non-terminal symbols
-    - T (typically :math:`\Sigma`) is the set of terminal symbols, disjoint from N
-    - P is the set of production rules of the form :math:`P : T -> (T \cup N)*`, where `*` is the
+    - T (typically :math:`\Sigma`) is the set of terminal symbols, disjoint from V
+    - P is the set of production rules of the form :math:`P : T -> (T \cup V)*`, where `*` is the
     Kleene star operation [1]_. Note that in the context of rule application, the following notation is used: :math:`alpha \in P` and :math:`beta \in (T \cup N)`. I.e., :math:`alpha` and
     :math:`beta` are concrete realizations of the left- and right-hand sides of a rule.
-    - S is the unique start symbol (a member of N)
+    - S is the unique start symbol (a member of V)
     
     A `Grammar` is indexable by the _index_ of the token on the left-hand side of a rule to yield a 
     list of _all_ possible transitions on the right-hand side of the rule.

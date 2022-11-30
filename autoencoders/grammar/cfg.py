@@ -8,7 +8,7 @@ from nltk.grammar import CFG, Nonterminal
 import torch
 from torch import Tensor
 
-from autoencoders.grammars.base import Grammar
+from autoencoders.grammar.grammar import Grammar
 
 
 class IndexableCFG(Grammar, CFG):
