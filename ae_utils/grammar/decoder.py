@@ -1,12 +1,12 @@
 from collections import deque
-from typing import Sequence
+from typing import Optional, Sequence
 
 import torch
 from torch import Tensor, nn
 
-from autoencoders.modules import RnnDecoder
-from autoencoders.grammar.grammar import Grammar
-from autoencoders.samplers import Sampler
+from ae_utils.modules import RnnDecoder
+from ae_utils.grammar.grammar import Grammar
+from ae_utils.samplers import Sampler
 
 
 class GrammarDecoder(RnnDecoder):
@@ -21,7 +21,7 @@ class GrammarDecoder(RnnDecoder):
         d_h: int = 384,
         n_layers: int = 3,
         dropout: float = 0.2,
-        sampler: Sampler | None = None,
+        sampler: Optional[Sampler] = None,
     ):
         super().__init__(SOS, EOS, embedding, d_emb, d_z, d_h, n_layers, dropout, sampler)
         self.G = grammar

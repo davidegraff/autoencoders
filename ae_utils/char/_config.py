@@ -6,10 +6,10 @@ from typing import Iterable
 
 from torch import nn
 
-from autoencoders.modules import RnnDecoder, RnnEncoder
-from autoencoders.regularizers import Regularizer
-from autoencoders.samplers import Sampler
-from autoencoders.char.tokenizer import Tokenizer
+from ae_utils.modules import RnnDecoder, RnnEncoder
+from ae_utils.regularizers import Regularizer
+from ae_utils.samplers import Sampler
+from ae_utils.char.tokenizer import Tokenizer
 
 
 class Config:

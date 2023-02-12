@@ -5,7 +5,7 @@ from abc import abstractmethod
 from torch import Tensor, nn
 from torch.distributions import Distribution, Categorical
 
-from autoencoders.utils import ClassRegistry, Configurable
+from ae_utils.utils import ClassRegistry, Configurable
 
 __all__ = ["Sampler", "ModeSampler", "MultinomialSampler", "NoisySampler"]
 

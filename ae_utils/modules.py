@@ -6,9 +6,9 @@ import torch
 from torch import Tensor, nn
 from torch.nn.utils import rnn
 
-from autoencoders.utils import Configurable
-from autoencoders.samplers import Sampler, SamplerRegistry, ModeSampler
-from autoencoders.regularizers import Regularizer, VariationalRegularizer, RegularizerRegistry
+from ae_utils.utils import Configurable
+from ae_utils.samplers import Sampler, SamplerRegistry, ModeSampler
+from ae_utils.regularizers import Regularizer, VariationalRegularizer, RegularizerRegistry
 
 __all__ = ["RnnEncoder", "RnnDecoder"]
 

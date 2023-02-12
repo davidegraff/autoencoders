@@ -6,7 +6,7 @@ from typing import Any, Iterable
 import numpy as np
 from numpy.typing import ArrayLike
 
-from autoencoders.utils import ClassRegistry, Configurable, ReprMixin
+from ae_utils.utils import ClassRegistry, Configurable, ReprMixin
 
 __all__ = [
     "Scheduler", "ConstantScheduler", "LinearScheduler", "ManualScheduler", "CyclicalScheduler"

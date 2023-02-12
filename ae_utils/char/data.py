@@ -6,7 +6,7 @@ from torch import Tensor
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from autoencoders.char.tokenizer import Tokenizer
+from ae_utils.char.tokenizer import Tokenizer
 
 
 class UnsupervisedDataset(Dataset):

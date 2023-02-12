@@ -10,15 +10,15 @@ import torch
 from torch import Tensor, optim, nn
 from torch.nn.utils import rnn
 
-from autoencoders.utils import Configurable, LoggingMixin, SaveAndLoadMixin
-from autoencoders.modules import RnnEncoder, RnnDecoder
-from autoencoders.schedulers import (
+from ae_utils.utils import Configurable, LoggingMixin, SaveAndLoadMixin
+from ae_utils.modules import RnnEncoder, RnnDecoder
+from ae_utils.schedulers import (
     LinearScheduler,
     Scheduler,
     ConstantScheduler,
     SchedulerRegistry,
 )
-from autoencoders.char.tokenizer import Tokenizer
+from ae_utils.char.tokenizer import Tokenizer
 
 block = BlockLogs()
 warnings.filterwarnings("ignore", "Trying to infer the `batch_size`", UserWarning)
