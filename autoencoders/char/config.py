@@ -7,7 +7,7 @@ from torch import nn
 
 from autoencoders.char.modules import RnnDecoder, RnnEncoder
 from autoencoders.char.regularizers import Regularizer
-from autoencoders.char.samplers import Sampler
+from autoencoders.samplers import Sampler
 from autoencoders.char.tokenizer import Tokenizer
 
 

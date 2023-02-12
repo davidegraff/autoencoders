@@ -7,8 +7,8 @@ from torch import Tensor, nn
 from torch.nn.utils import rnn
 
 from autoencoders.utils import Configurable
+from autoencoders.samplers import Sampler, SamplerRegistry, ModeSampler
 from autoencoders.char.regularizers import Regularizer, VariationalRegularizer, RegularizerRegistry
-from autoencoders.char.samplers import Sampler, ModeSampler, SamplerRegistry
 
 
 class RnnEncoder(nn.Module, Configurable):
