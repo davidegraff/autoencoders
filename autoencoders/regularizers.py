@@ -9,6 +9,8 @@ from autoencoders.utils import ClassRegistry, Configurable
 
 RegularizerRegistry = ClassRegistry()
 
+__all__ = ['Regularizer', 'DummyRegularizer', 'VariationalRegularizer']
+
 
 class Regularizer(nn.Module, Configurable):
     """A :class:`Regularizer` projects from the encoder output to the latent space and

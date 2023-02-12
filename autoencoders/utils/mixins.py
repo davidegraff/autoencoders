@@ -6,6 +6,7 @@ from typing import Any, Iterable, Mapping
 
 import torch
 
+
 class LoggingMixin:
     def _log_split(self, split: str, metrics: Mapping[str, Any], *args, **kwargs):
         self.log_dict({f"{split}/{k}": v for k, v in metrics.items()}, *args, **kwargs)
@@ -45,14 +46,13 @@ class ReprMixin:
     def __repr__(self) -> str:
         sig = inspect.signature(self.__init__)
 
-        keys = sig.parameters.keys()
-        values = self.get_params()
-        defaults = [p.default for p in sig.parameters.values()]
+        keys, values = self.get_params()
+        defaults = [sig.parameters[k].default for k in keys]
 
         items = [(k, v) for k, v, d in zip(keys, values, defaults) if v != d]
         argspec = ", ".join(f"{k}={repr(v)}" for k, v in items)
 
         return f"{self.__class__.__name__}({argspec})"
 
-    def get_params(self) -> Iterable:
+    def get_params(self) -> Iterable[tuple[str, Any]]:
         return self.__dict__.values()

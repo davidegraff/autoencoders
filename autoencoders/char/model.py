@@ -11,21 +11,21 @@ from torch import Tensor, optim, nn
 from torch.nn.utils import rnn
 
 from autoencoders.utils import Configurable, LoggingMixin, SaveAndLoadMixin
-from autoencoders.char.tokenizer import Tokenizer
-from autoencoders.char.modules import RnnEncoder, RnnDecoder
-from autoencoders.char.schedulers import (
+from autoencoders.modules import RnnEncoder, RnnDecoder
+from autoencoders.schedulers import (
     LinearScheduler,
     Scheduler,
     ConstantScheduler,
     SchedulerRegistry,
 )
+from autoencoders.char.tokenizer import Tokenizer
 
 block = BlockLogs()
 warnings.filterwarnings("ignore", "Trying to infer the `batch_size`", UserWarning)
 warnings.filterwarnings("ignore", "dropout option adds dropout after all but last", UserWarning)
 
 
-class LitVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
+class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     """A variational autoencoder for learning latent representations of strings using
     character-based RNN encoder/decoder pair
 
@@ -195,7 +195,7 @@ class LitVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         }
 
     @classmethod
-    def from_config(cls, config: dict) -> LitVAE:
+    def from_config(cls, config: dict) -> LitCVAE:
         enc_emb_config = config["encoder"]["embedding"]
         dec_emb_config = config["decoder"]["embedding"]
 

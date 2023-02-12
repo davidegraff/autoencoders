@@ -1,3 +1,4 @@
+"""NOTE: this module isn't used right now but will be in the future"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -5,8 +6,8 @@ from typing import Iterable
 
 from torch import nn
 
-from autoencoders.char.modules import RnnDecoder, RnnEncoder
-from autoencoders.char.regularizers import Regularizer
+from autoencoders.modules import RnnDecoder, RnnEncoder
+from autoencoders.regularizers import Regularizer
 from autoencoders.samplers import Sampler
 from autoencoders.char.tokenizer import Tokenizer
 

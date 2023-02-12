@@ -8,7 +8,9 @@ from torch.nn.utils import rnn
 
 from autoencoders.utils import Configurable
 from autoencoders.samplers import Sampler, SamplerRegistry, ModeSampler
-from autoencoders.char.regularizers import Regularizer, VariationalRegularizer, RegularizerRegistry
+from autoencoders.regularizers import Regularizer, VariationalRegularizer, RegularizerRegistry
+
+__all__ = ["RnnEncoder", "RnnDecoder"]
 
 
 class RnnEncoder(nn.Module, Configurable):

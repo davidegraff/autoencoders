@@ -1,6 +1,3 @@
 from .data import UnsupervisedDataset, CachedUnsupervisedDataset
-from .model import LitVAE
-from .modules import RnnDecoder, RnnEncoder
-from .regularizers import *
-from .schedulers import *
+from .model import LitCVAE
 from .tokenizer import Tokenizer

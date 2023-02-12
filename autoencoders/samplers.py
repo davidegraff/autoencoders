@@ -7,6 +7,8 @@ from torch.distributions import Distribution, Categorical
 
 from autoencoders.utils import ClassRegistry, Configurable
 
+__all__ = ["Sampler", "ModeSampler", "MultinomialSampler", "NoisySampler"]
+
 SamplerRegistry = ClassRegistry()
 
 

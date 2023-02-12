@@ -4,7 +4,7 @@ from typing import Sequence
 import torch
 from torch import Tensor, nn
 
-from autoencoders.char.modules import RnnDecoder
+from autoencoders.modules import RnnDecoder
 from autoencoders.grammar.grammar import Grammar
 from autoencoders.samplers import Sampler
 

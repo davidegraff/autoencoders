@@ -6,12 +6,16 @@ from typing import Any, Iterable
 import numpy as np
 from numpy.typing import ArrayLike
 
-from autoencoders.utils import ClassRegistry, Configurable
+from autoencoders.utils import ClassRegistry, Configurable, ReprMixin
+
+__all__ = [
+    "Scheduler", "ConstantScheduler", "LinearScheduler", "ManualScheduler", "CyclicalScheduler"
+]
 
 SchedulerRegistry = ClassRegistry()
 
 
-class Scheduler(ABC, Configurable):
+class Scheduler(ABC, Configurable, ReprMixin):
     """A Scheduler anneals a weight term from `v0` -> `v1` over `max_steps` number of steps
 
     Parameters
@@ -109,7 +113,7 @@ class LinearScheduler(Scheduler):
         return np.linspace(v_min, v_max, max_steps + 1)
 
 
-class CyclicScheduler(LinearScheduler):
+class CyclicalScheduler(LinearScheduler):
     """Linearly increments the weight from `v0` to `v1` over `r * max_steps` and plateuas at
     `v1` from `r * max_steps` to `max_steps`. Every `max_steps` number of calls to `step()`, resets
     the weight to `v0`"""
@@ -147,7 +151,7 @@ class CyclicScheduler(LinearScheduler):
 
 
 @SchedulerRegistry.register("manual")
-class ManualScheduler(Scheduler):
+class ManualScheduler(Scheduler, ReprMixin):
     """Step the weight according to the input schedule
 
     Parameters
@@ -190,6 +194,3 @@ class ManualScheduler(Scheduler):
 
     def to_config(self) -> dict:
         return {"schedule": self.schedule.tolist()}
-
-    def get_params(self):
-        return [self.schedule.tolist()]
