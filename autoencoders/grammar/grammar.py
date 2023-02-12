@@ -6,7 +6,7 @@ from torch import Tensor
 
 
 class Grammar(Mapping):
-    """A `Grammar` is the abstraction of a formal grammar
+    """A `Grammar` is an abstraction of a formal grammar
 
     A grammar G is formally a 4-tuple: G = (V, T, P, S), where:
     - V is the set of non-terminal symbols

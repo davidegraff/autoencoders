@@ -4,12 +4,12 @@ from typing import Sequence
 import torch
 from torch import Tensor, nn
 
-from autoencoders.character.decoder import CharacterDecoder
+from autoencoders.char.modules import RnnDecoder
 from autoencoders.grammar.grammar import Grammar
 from autoencoders.samplers import Sampler
 
 
-class GrammarDecoder(CharacterDecoder):
+class GrammarDecoder(RnnDecoder):
     def __init__(
         self,
         SOS: int,
