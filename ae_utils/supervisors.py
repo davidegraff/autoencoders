@@ -42,9 +42,9 @@ class RegressionSupervisor(Supervisor):
         return {
             "input_dim": self.ffn[0].in_features,
             "output_dim": self.ffn[-1].out_features,
-            "hidden_dims": hidden_dims
+            "hidden_dims": hidden_dims,
         }
-    
+
 
 class ContrastiveSupervisor(Supervisor):
     def __init__(
@@ -60,8 +60,4 @@ class ContrastiveSupervisor(Supervisor):
         return self.cont_metric(Z[mask], Y[mask]) if mask.any() else torch.tensor(0.0)
 
     def to_config(self) -> dict:
-        return {
-            "df_x": self.cont_metric.df_x,
-            "df_y": self.cont_metric.df_y
-        }
-    
+        return {"df_x": self.cont_metric.df_x, "df_y": self.cont_metric.df_y}

@@ -30,8 +30,7 @@ class GrammarDecoder(RnnDecoder):
         logits = super().forward(xs, Z)
 
         masks = [
-            self.G.calc_mask([x[:t + 1] for x in xs], self.d_v)
-            for t in range(logits.shape[1])
+            self.G.calc_mask([x[: t + 1] for x in xs], self.d_v) for t in range(logits.shape[1])
         ]
         mask = torch.stack(masks, dim=1)
         logits[~mask] = -torch.inf

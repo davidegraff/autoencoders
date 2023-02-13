@@ -13,7 +13,7 @@ from ae_utils.grammar.grammar import Grammar
 
 class IndexableCFG(Grammar, CFG):
     """An `IndexableCFG` is an extension of an `nltk.grammar.CFG` that allows for index-based access
-    
+
     NOTE: a "token" in an `nltk.grammar.CFG` is of type `Union[Nonterminal, str]`, so obtaining the index of a nonterminal token must be called like so
 
     >>> from nltk.grammar import Nonterminal
@@ -47,7 +47,7 @@ class IndexableCFG(Grammar, CFG):
     @property
     def t2i(self) -> dict[Union[Nonterminal, str], int]:
         return self.__t2i
-    
+
     @property
     def i2t(self) -> dict[int, Union[Nonterminal, str]]:
         return self.__i2t

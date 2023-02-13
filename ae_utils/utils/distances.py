@@ -43,6 +43,6 @@ class PNormDistance(DistanceFunction):
         super().__init__()
 
         self.p = p
-    
+
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
         return torch.cdist(X, Y, self.p)

@@ -15,10 +15,10 @@ class Grammar(Mapping):
     Kleene star operation [1]_. Note that in the context of rule application, the following notation is used: :math:`alpha \in P` and :math:`beta \in (T \cup N)`. I.e., :math:`alpha` and
     :math:`beta` are concrete realizations of the left- and right-hand sides of a rule.
     - S is the unique start symbol (a member of V)
-    
-    A `Grammar` is indexable by the _index_ of the token on the left-hand side of a rule to yield a 
+
+    A `Grammar` is indexable by the _index_ of the token on the left-hand side of a rule to yield a
     list of _all_ possible transitions on the right-hand side of the rule.
-    
+
     References
     ----------
     .. [1] https://en.wikipedia.org/wiki/Kleene_star
@@ -66,10 +66,10 @@ class Grammar(Mapping):
         Returns
         -------
         list[list[int, ...]]
-            a list of lists, where the outer list is the number of rules associated with the given 
-            token index, and the inner list containins the indices of the tokens produced by the 
+            a list of lists, where the outer list is the number of rules associated with the given
+            token index, and the inner list containins the indices of the tokens produced by the
             rule
-        
+
         Raises
         ------
         KeyError
@@ -81,11 +81,10 @@ class Grammar(Mapping):
         """like `__getitem__` but returns an empty tuple if the given token isn't associated with
         any rules"""
 
-
     @abstractmethod
     def calc_mask(self, seqs: Tensor) -> Tensor:
         """Calculate the invalid rule mask based on the corresponding parse trees
-        
+
         Parameters
         ----------
         seqs : Tensor

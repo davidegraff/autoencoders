@@ -15,6 +15,7 @@ from ae_utils.char.tokenizer import Tokenizer
 class Config:
     pass
 
+
 @dataclass
 class FactoryConfig(Config):
     alias: str

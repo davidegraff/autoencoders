@@ -76,10 +76,7 @@ class NoisySampler(Sampler):
 
     @warn_not_serializable
     def to_config(self) -> dict:
-        raise {
-            "sampler": self.sampler,
-            "noise": self.noise
-        }
+        raise {"sampler": self.sampler, "noise": self.noise}
 
     @classmethod
     def from_config(cls, config: dict) -> Sampler:

@@ -8,11 +8,15 @@ from torch import Tensor, nn
 from torch.distributions import Distribution, Normal
 
 from ae_utils.utils import (
-    ClassRegistry, Configurable, KernelFunction, InverseMultiQuadraticKernel, MMDLoss
+    ClassRegistry,
+    Configurable,
+    KernelFunction,
+    InverseMultiQuadraticKernel,
+    MMDLoss,
 )
 from ae_utils.utils.config import warn_not_serializable
 
-__all__ = ['Regularizer', 'RegularizerRegistry', 'DummyRegularizer', 'VariationalRegularizer']
+__all__ = ["Regularizer", "RegularizerRegistry", "DummyRegularizer", "VariationalRegularizer"]
 
 RegularizerRegistry = ClassRegistry()
 
@@ -35,7 +39,7 @@ class Regularizer(nn.Module, Configurable):
     @abstractmethod
     def setup(self, d_h: int):
         """Perform any setup necessary before using this `Regularizer`.
-        
+
         NOTE: this function _must_ be called at some point in the `__init__()` function.
         """
 
@@ -112,7 +116,7 @@ class VariationalRegularizer(DummyRegularizer):
         Z_mean, Z_logvar = self.q_h2z_mean(H), self.q_h2z_logvar(H)
 
         Z = self.reparameterize(Z_mean, Z_logvar)
-        #NOTE(degraff): switch following line for arbitrary priors
+        # NOTE(degraff): switch following line for arbitrary priors
         l_kl = 0.5 * (Z_mean**2 + Z_logvar.exp() - 1 - Z_logvar).sum(1).mean()
 
         return Z, l_kl
@@ -143,7 +147,7 @@ class WassersteinRegularizer(DummyRegularizer):
         self,
         d_z: int,
         kernel: Optional[KernelFunction] = None,
-        prior: Optional[Distribution] = None
+        prior: Optional[Distribution] = None,
     ):
         super().__init__(d_z)
 
@@ -166,8 +170,4 @@ class WassersteinRegularizer(DummyRegularizer):
 
     @warn_not_serializable
     def to_config(self) -> dict:
-        return {
-            "d_z": self.d_z,
-            "kernel": self.mmd_metric.kernel,
-            "prior": self.prior
-        }
+        return {"d_z": self.d_z, "kernel": self.mmd_metric.kernel, "prior": self.prior}

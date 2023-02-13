@@ -12,12 +12,7 @@ from torch.nn.utils import rnn
 
 from ae_utils.utils import Configurable, LoggingMixin, SaveAndLoadMixin
 from ae_utils.modules import RnnEncoder, RnnDecoder
-from ae_utils.schedulers import (
-    LinearScheduler,
-    Scheduler,
-    ConstantScheduler,
-    SchedulerRegistry,
-)
+from ae_utils.schedulers import LinearScheduler, Scheduler, ConstantScheduler, SchedulerRegistry
 from ae_utils.char.tokenizer import Tokenizer
 
 block = BlockLogs()
