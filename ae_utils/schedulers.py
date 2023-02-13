@@ -6,7 +6,7 @@ from typing import Any, Iterable
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ae_utils.utils import ClassRegistry, Configurable, ReprMixin
+from ae_utils.utils import ClassRegistry, Configurable
 
 __all__ = [
     "Scheduler",
@@ -19,7 +19,7 @@ __all__ = [
 SchedulerRegistry = ClassRegistry()
 
 
-class Scheduler(Configurable, ReprMixin, ABC):
+class Scheduler(Configurable, ABC):
     """A Scheduler anneals a weight term from `v0` -> `v1` over `max_steps` number of steps
 
     Parameters
@@ -54,6 +54,9 @@ class Scheduler(Configurable, ReprMixin, ABC):
         """Step the scheduler and return the new weight"""
         self.i += 1
         return self.v
+
+    def reset(self):
+        self.i = 0
 
     @staticmethod
     @abstractmethod
@@ -152,7 +155,7 @@ class CyclicalScheduler(LinearScheduler):
 
 
 @SchedulerRegistry.register("manual")
-class ManualScheduler(Scheduler, ReprMixin):
+class ManualScheduler(Scheduler):
     """Step the weight according to the input schedule
 
     Parameters

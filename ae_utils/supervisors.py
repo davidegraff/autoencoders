@@ -12,10 +12,22 @@ class Supervisor(nn.Module, Configurable):
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:
         pass
 
+    @abstractmethod
+    def check_input_dim(self, input_dim: int):
+        """Check that the intended input dimension is valid for this supervisor.
+        
+        Raises
+        ------
+        ValueError
+            if the input dimension is not valid
+        """
 
 class DummySupervisor(Supervisor):
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:
         return torch.tensor(0.0)
+
+    def check_input_dim(self, d_z: int):
+        return
 
     def to_config(self) -> dict:
         return {}
@@ -36,6 +48,11 @@ class RegressionSupervisor(Supervisor):
 
         return torch.tensor(0.0)
 
+    def check_input_dim(self, d_z: int):
+        input_dim = self.ffn[0].in_features
+        if input_dim != d_z:
+            raise ValueError(f"Invalid input dimensionality! got: {d_z}. expected: {input_dim}")
+        
     def to_config(self) -> dict:
         hidden_dims = [layer.out_features for layer in self.ffn[-1]] if len(self.ffn) > 1 else None
 
@@ -59,5 +76,8 @@ class ContrastiveSupervisor(Supervisor):
 
         return self.cont_metric(Z[mask], Y[mask]) if mask.any() else torch.tensor(0.0)
 
+    def check_input_dim(self, d_z: int):
+        return
+    
     def to_config(self) -> dict:
         return {"df_x": self.cont_metric.df_x, "df_y": self.cont_metric.df_y}

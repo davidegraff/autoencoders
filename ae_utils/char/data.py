@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Optional
 
 import numpy as np
 import torch
@@ -39,15 +39,26 @@ class CachedUnsupervisedDataset(UnsupervisedDataset):
 
 
 class SupervisedDataset(Dataset):
-    def __init__(self, dset: UnsupervisedDataset, Y: np.ndarray):
+    def __init__(self, dset: UnsupervisedDataset, Y: Optional[np.ndarray]):
         self.dset = dset
-        self.Y = torch.from_numpy(Y).float()
+        if Y is not None:
+            if len(Y) != len(self.dset):
+                raise ValueError(
+                    "args 'dset' and 'Y' must have same length! "
+                    f"got: {len(dset)}, {len(Y)}, respectively."
+                )
+            self.Y = torch.from_numpy(Y).float()
+        else:
+            self.Y = torch.empty((len(dset), 1))
 
+    def __len__(self) -> int:
+        return len(self.dset)
+    
     def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
         return self.dset[i], self.Y[i]
 
     @staticmethod
-    def collate_fn(batch: Iterable[tuple[Tensor, Tensor]]) -> list[Tensor]:
+    def collate_fn(batch: Iterable[tuple[Tensor, Tensor]]) -> tuple[list[Tensor], Tensor]:
         idss, ys = zip(*batch)
 
         return idss, torch.stack(ys)

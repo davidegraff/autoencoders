@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence, Union
+from typing import Optional, Sequence, Union
 import warnings
 
 import pytorch_lightning as pl
@@ -14,6 +14,7 @@ from ae_utils.utils import Configurable, LoggingMixin, SaveAndLoadMixin
 from ae_utils.modules import RnnEncoder, RnnDecoder
 from ae_utils.schedulers import LinearScheduler, Scheduler, ConstantScheduler, SchedulerRegistry
 from ae_utils.char.tokenizer import Tokenizer
+from ae_utils.supervisors import Supervisor, DummySupervisor
 
 block = BlockLogs()
 warnings.filterwarnings("ignore", "Trying to infer the `batch_size`", UserWarning)
@@ -33,10 +34,11 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     tokenizer : Tokenizer
         the :class:`~autoencoders.char.tokenizer.Tokenizer` to use for measuring generation quality
         during validation
-    encoder: CharEncoder
+    encoder : CharEncoder
         the encoder module to project from tokenized sequences into the latent space
-    decoder: CharDecoder
+    decoder : CharDecoder
         the decoder module to generate tokenized sequences from latent representations
+    supervisor : Optional[Supervisor] = None
     lr : float, default=3e-4
         the learning rate
     v_reg : Union[float, Scheduler, None], default=None
@@ -46,10 +48,18 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         * `float`: use a constant weight schedule (i.e., no scheudle)
         * `None`: use a `~autoencoders.char.schedulers.LinearScheduler` from 0->0.1 over 20 epochs
 
+    v_sup : Union[float, Scheduler], default=0
+        the supervision loss weight scheduler. One of:
+
+        * `Scheduler`: the scheduler to use
+        * `float`: use a constant weight schedule (i.e., no scheudle)
+
     Raises
     ------
     ValueError
-        if the supplied CharEncoder and CharDecoder do not have the same latent dimension
+
+        * if the supplied CharEncoder and CharDecoder do not have the same latent dimension
+        * if the Supervisor does not have the correct input dimension (= the VAE's latent dimension)
     """
 
     def __init__(
@@ -57,8 +67,10 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         tokenizer: Tokenizer,
         encoder: RnnEncoder,
         decoder: RnnDecoder,
+        supervisor: Optional[Supervisor] = None,
         lr: float = 3e-4,
         v_reg: Union[float, Scheduler, None] = None,
+        v_sup: Union[float, Scheduler] = 0,
     ):
         super().__init__()
 
@@ -81,23 +93,40 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self.tokenizer = tokenizer
         self.encoder = encoder
         self.decoder = decoder
+        self.supervisor = supervisor or DummySupervisor()
         self.lr = lr
-        if v_reg is None:
-            self.v_reg = LinearScheduler(0, 0.1, 20)
-        elif isinstance(v_reg, float):
-            self.v_reg = ConstantScheduler(v_reg)
-        elif isinstance(v_reg, Scheduler):
-            self.v_reg = v_reg
-        else:
-            raise TypeError(
-                "arg 'v_reg' must be of type (None | float | Scheduler)! " f"got: {type(v_reg)}"
-            )
+        
+        self.v_reg = v_reg
+        self.v_sup = v_sup
 
         self.rec_metric = nn.CrossEntropyLoss(reduction="sum", ignore_index=self.encoder.PAD)
+        
+        self.supervisor.check_input_dim(self.d_z)
 
     @property
     def d_z(self) -> int:
         return self.encoder.d_z
+
+    @property
+    def v_reg(self) -> Scheduler:
+        return self.__v_reg
+    
+    @v_reg.setter
+    def v_reg(self, v_reg: Union[float, Scheduler, None]):
+        if isinstance(v_reg, (int, float)):
+            self.__v_reg = ConstantScheduler(v_reg, "reg")
+        elif v_reg is None:
+            self.__v_reg = LinearScheduler(0, 0.1, 20, "reg") 
+        else:
+            self.__v_reg = v_reg
+
+    @property
+    def v_sup(self) -> Scheduler:
+        return self.__v_sup
+    
+    @v_sup.setter
+    def v_sup(self, v: Union[float, Scheduler]):
+        self.__v_sup = ConstantScheduler(v, "sup") if isinstance(v, (int, float)) else v
 
     def encode(self, xs: Sequence[Tensor]) -> Tensor:
         return self.encoder(xs)
@@ -112,10 +141,11 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     generate = decode
 
     def on_train_start(self):
-        self.v_reg.i = 0
+        self.v_reg.reset()
+        self.v_sup.reset()
 
     def training_step(self, batch: Sequence[Tensor], batch_idx) -> Tensor:
-        xs = batch
+        xs, Y = batch
 
         Z, l_reg = self.encoder.forward_step(xs)
         X_logits = self.decoder.forward_step(xs, Z)
@@ -124,15 +154,16 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         X_packed = rnn.pad_sequence(xs, True, self.decoder.PAD)[:, 1:].contiguous().view(-1)
 
         l_rec = self.rec_metric(X_logits_packed, X_packed) / len(xs)
+        l_sup = self.supervisor(Z, Y)
 
-        metrics = dict(rec=l_rec, reg=l_reg)
+        metrics = dict(rec=l_rec, reg=l_reg, sup=l_sup)
         self._log_split("train", metrics)
-        self.log("loss", l_rec + l_reg)
+        self.log("loss", l_rec + l_reg + l_sup)
 
-        return l_rec + self.v_reg.v * l_reg
+        return l_rec + self.v_reg.v * l_reg + self.v_sup.v * l_sup
 
     def validation_step(self, batch: Sequence[Tensor], batch_idx):
-        xs = batch
+        xs, Y = batch
 
         Z, l_reg = self.encoder.forward_step(xs)
         X_logits = self.decoder.forward_step(xs, Z)
@@ -141,23 +172,24 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         X_packed = rnn.pad_sequence(xs, True, self.decoder.PAD)[:, 1:].contiguous().view(-1)
 
         l_rec = self.rec_metric(X_logits_packed, X_packed) / len(xs)
+        l_sup = self.supervisor(Z, Y)
         acc = sum(map(torch.equal, xs, self.reconstruct(xs))) / len(xs)
 
-        return l_rec, l_reg, acc, len(xs)
+        return l_rec, l_reg, l_sup, acc, len(xs)
 
     def predict_step(self, batch, batch_idx: int, dataloader_idx=0) -> Tensor:
         return self.encode(batch)
 
     def on_train_epoch_start(self):
-        self.log(f"v/{self.encoder.reg.name}", self.v_reg.v)
+        self.log(f"v/{self.v_reg.name}", self.v_reg.v)
 
     def training_epoch_end(self, *args):
         self.v_reg.step()
 
     def validation_epoch_end(self, outputs):
-        l_recs, l_regs, accs, sizes = torch.tensor(outputs).hsplit(4)
-        l_rec, l_reg, acc = ((l * sizes).sum() / sizes.sum() for l in [l_recs, l_regs, accs])
-        metrics = dict(rec=l_rec, reg=l_reg, loss=l_rec + l_reg, acc=acc)
+        *losses, sizes = torch.tensor(outputs).split(1, 1)
+        l_rec, l_reg, l_sup, acc = ((l * sizes).sum() / sizes.sum() for l in losses)
+        metrics = dict(rec=l_rec, reg=l_reg, sup=l_sup, loss=l_rec + l_reg + l_sup, acc=acc)
 
         n = 1000
         f_valid, f_unique = self.check_gen_quality(torch.randn(n, self.d_z, device=self.device))
@@ -166,7 +198,9 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self._log_split("val", metrics)
 
     def configure_optimizers(self):
-        params = set(self.encoder.parameters()) | set(self.decoder.parameters())
+        params = set(self.encoder.parameters())
+        params.update(self.decoder.parameters())
+        params.update(self.supervisor.parameters())
 
         return optim.Adam(params, self.lr)
 
