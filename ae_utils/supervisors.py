@@ -10,7 +10,11 @@ from ae_utils.utils import Configurable, DistanceFunction, ContrastiveLoss, buil
 class Supervisor(nn.Module, Configurable):
     @abstractmethod
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:
-        pass
+        """Calculate the supervision loss term.
+        
+        NOTE: this function _internally_ handles semisupervision. I.e., the targets `Y` should
+        contain *both* labeled *and* unlabeled inputs
+        """
 
     @abstractmethod
     def check_input_dim(self, input_dim: int):
@@ -72,7 +76,7 @@ class ContrastiveSupervisor(Supervisor):
         self.cont_metric = ContrastiveLoss(df_x, df_y)
 
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:
-        mask = ~Y.isnan().any(1)
+        mask = Y.isfinite().any(1)
 
         return self.cont_metric(Z[mask], Y[mask]) if mask.any() else torch.tensor(0.0)
 
