@@ -15,7 +15,7 @@ __all__ = [
 SchedulerRegistry = ClassRegistry()
 
 
-class Scheduler(ABC, Configurable, ReprMixin):
+class Scheduler(Configurable, ReprMixin, ABC):
     """A Scheduler anneals a weight term from `v0` -> `v1` over `max_steps` number of steps
 
     Parameters
@@ -54,7 +54,8 @@ class Scheduler(ABC, Configurable, ReprMixin):
     @staticmethod
     @abstractmethod
     def calc_schedule(v_min, v_max, max_steps) -> np.ndarray:
-        """Calculate the schedule of the KL weight according to this scheduler's underlying algorithm
+        """Calculate the schedule of the KL weight according to this scheduler's underlying
+        algorithm
 
         Parameters
         ----------
@@ -79,10 +80,6 @@ class Scheduler(ABC, Configurable, ReprMixin):
             "max_steps": self.max_steps,
             "name": self.name,
         }
-
-    @classmethod
-    def from_config(cls, config: dict) -> Configurable:
-        return cls(**config)
 
     def get_params(self) -> Iterable[tuple[str, Any]]:
         return self.to_config().items()
@@ -114,7 +111,7 @@ class LinearScheduler(Scheduler):
 
 
 class CyclicalScheduler(LinearScheduler):
-    """Linearly increments the weight from `v0` to `v1` over `r * max_steps` and plateuas at
+    """Linearly increments the weight from `v0` to `v1` over `r * max_steps` and plateaus at
     `v1` from `r * max_steps` to `max_steps`. Every `max_steps` number of calls to `step()`, resets
     the weight to `v0`"""
 

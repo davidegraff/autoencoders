@@ -3,7 +3,7 @@ from abc import abstractmethod
 import torch
 from torch import Tensor, nn
 
-from ae_utils.utils import ClassRegistry
+from ae_utils.utils.registry import ClassRegistry
 
 DistanceFunctionRegistry = ClassRegistry()
 

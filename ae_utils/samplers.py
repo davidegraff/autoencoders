@@ -6,6 +6,7 @@ from torch import Tensor, nn
 from torch.distributions import Distribution, Categorical
 
 from ae_utils.utils import ClassRegistry, Configurable
+from ae_utils.utils.config import warn_not_serializable
 
 __all__ = ["Sampler", "ModeSampler", "MultinomialSampler", "NoisySampler"]
 
@@ -13,8 +14,7 @@ SamplerRegistry = ClassRegistry()
 
 
 class Sampler(nn.Module, Configurable):
-    """A `Sampler` defines the sampling operation from a collection of unnormalized probabilities
-    ("logits")"""
+    """A `Sampler` defines the samples from a collection of unnormalized probabilities ("logits")"""
 
     def forward(self, logits: Tensor) -> Tensor:
         """Sample an index from last dimension of the input tensor
@@ -40,10 +40,6 @@ class Sampler(nn.Module, Configurable):
 
     def to_config(self) -> dict:
         return {}
-
-    @classmethod
-    def from_config(cls, config: dict) -> Sampler:
-        return cls(**config)
 
 
 @SamplerRegistry.register("mode")
@@ -78,8 +74,12 @@ class NoisySampler(Sampler):
     def sample(self, probs: Tensor) -> Tensor:
         return self.sampler.sample(probs + self.noise.sample(probs.shape))
 
+    @warn_not_serializable
     def to_config(self) -> dict:
-        raise NotImplementedError(f"{self.alias} can not be serialized!")
+        raise {
+            "sampler": self.sampler,
+            "noise": self.noise
+        }
 
     @classmethod
     def from_config(cls, config: dict) -> Sampler:

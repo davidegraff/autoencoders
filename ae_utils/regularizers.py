@@ -10,6 +10,7 @@ from torch.distributions import Distribution, Normal
 from ae_utils.utils import (
     ClassRegistry, Configurable, KernelFunction, InverseMultiQuadraticKernel, MMDLoss
 )
+from ae_utils.utils.config import warn_not_serializable
 
 __all__ = ['Regularizer', 'RegularizerRegistry', 'DummyRegularizer', 'VariationalRegularizer']
 
@@ -49,10 +50,6 @@ class Regularizer(nn.Module, Configurable):
 
     def to_config(self) -> dict:
         return {"d_z": self.d_z}
-
-    @classmethod
-    def from_config(cls, config: dict) -> Regularizer:
-        return cls(**config)
 
 
 @RegularizerRegistry.register("dummy")
@@ -138,8 +135,8 @@ class WassersteinRegularizer(DummyRegularizer):
 
     References
     ----------
-    .. [1] Tolstikhin, I.; Bousquet, O.; Gelly, S.; and Schoelkopf, B. arxiv:1711.01558 [stat.ML],
-        2017
+    .. [1] Tolstikhin, I.; Bousquet, O.; Gelly, S.; and Schoelkopf, B; arxiv:1711.01558 [stat.ML],
+    2017
     """
 
     def __init__(
@@ -167,9 +164,10 @@ class WassersteinRegularizer(DummyRegularizer):
 
         return Z, l_mmd
 
+    @warn_not_serializable
     def to_config(self) -> dict:
         return {
             "d_z": self.d_z,
-            "kernel": None,
-            "prior": None
+            "kernel": self.mmd_metric.kernel,
+            "prior": self.prior
         }
