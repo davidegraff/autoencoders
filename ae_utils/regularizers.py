@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from typing import Optional
 
 import torch
 from torch import Tensor, nn
+from torch.distributions import Distribution, Normal
 
-from ae_utils.utils import ClassRegistry, Configurable
+from ae_utils.utils import (
+    ClassRegistry, Configurable, KernelFunction, InverseMultiQuadraticKernel, MMDLoss
+)
+
+__all__ = ['Regularizer', 'RegularizerRegistry', 'DummyRegularizer', 'VariationalRegularizer']
 
 RegularizerRegistry = ClassRegistry()
-
-__all__ = ['Regularizer', 'DummyRegularizer', 'VariationalRegularizer']
 
 
 class Regularizer(nn.Module, Configurable):
@@ -18,9 +22,12 @@ class Regularizer(nn.Module, Configurable):
 
     def __init__(self, d_z: int, **kwargs):
         super().__init__()
+
         self.d_z = d_z
 
+    @classmethod
     @property
+    @abstractmethod
     def name(self) -> str:
         """the name of the regularization loss"""
 
@@ -55,15 +62,16 @@ class DummyRegularizer(Regularizer):
     def __init__(self, d_z: int):
         super().__init__(d_z)
 
+    @classmethod
     @property
     def name(self) -> str:
         return "ae"
 
     def setup(self, d_h: int):
-        self.q_h2z_mu = nn.Linear(d_h, self.d_z)
+        self.q_h2z_mean = nn.Linear(d_h, self.d_z)
 
     def forward(self, H: Tensor) -> Tensor:
-        return self.q_h2z_mu(H)
+        return self.q_h2z_mean(H)
 
     def forward_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
         return self(H), torch.tensor(0.0)
@@ -78,11 +86,18 @@ class VariationalRegularizer(DummyRegularizer):
     References
     ----------
     .. [1] Kingma, D.P.; and Welling, M.; arXiv:1312.6114v10 [stat.ML], 2014
+
+    Notes
+    -----
+    This class can easily be amended to allow for arbitrary prior distributions, but (1) that
+    was not necessary for the original use case and (2) makes the code scale _much_ worse in both
+    `b` and `d`
     """
 
     def __init__(self, d_z: int):
         super().__init__(d_z)
 
+    @classmethod
     @property
     def name(self) -> str:
         return "kl"
@@ -92,14 +107,15 @@ class VariationalRegularizer(DummyRegularizer):
         self.q_h2z_logvar = nn.Linear(d_h, self.d_z)
 
     def forward(self, H: Tensor):
-        Z_mean, Z_logvar = self.q_h2z_mu(H), self.q_h2z_logvar(H)
+        Z_mean, Z_logvar = self.q_h2z_mean(H), self.q_h2z_logvar(H)
 
         return self.reparameterize(Z_mean, Z_logvar)
 
     def forward_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
-        Z_mean, Z_logvar = self.q_h2z_mu(H), self.q_h2z_logvar(H)
+        Z_mean, Z_logvar = self.q_h2z_mean(H), self.q_h2z_logvar(H)
 
         Z = self.reparameterize(Z_mean, Z_logvar)
+        #NOTE(degraff): switch following line for arbitrary priors
         l_kl = 0.5 * (Z_mean**2 + Z_logvar.exp() - 1 - Z_logvar).sum(1).mean()
 
         return Z, l_kl
@@ -110,3 +126,50 @@ class VariationalRegularizer(DummyRegularizer):
         eps = torch.randn_like(sd)
 
         return mean + eps * sd
+
+
+@RegularizerRegistry.register("wae")
+class WassersteinRegularizer(DummyRegularizer):
+    """A :class:`WassersteinRegularizer` calculates the the regularization loss as the wasserstein
+    distance between the output and a sample from an input prior distribution
+
+    NOTE: This class does not currently support serialization with non-default values for 'kernel'
+    or 'prior'
+
+    References
+    ----------
+    .. [1] Tolstikhin, I.; Bousquet, O.; Gelly, S.; and Schoelkopf, B. arxiv:1711.01558 [stat.ML],
+        2017
+    """
+
+    def __init__(
+        self,
+        d_z: int,
+        kernel: Optional[KernelFunction] = None,
+        prior: Optional[Distribution] = None
+    ):
+        super().__init__(d_z)
+
+        kernel = kernel or InverseMultiQuadraticKernel(2 * self.d_z)
+        self.mmd_metric = MMDLoss(kernel)
+        self.prior = prior or Normal(0, 1)
+
+    @classmethod
+    @property
+    def name(self) -> str:
+        return "mmd"
+
+    def forward_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
+        Z = self(H)
+
+        Z_prior = self.prior.sample(Z.shape).to(Z.device)
+        l_mmd = self.mmd_metric(Z, Z_prior)
+
+        return Z, l_mmd
+
+    def to_config(self) -> dict:
+        return {
+            "d_z": self.d_z,
+            "kernel": None,
+            "prior": None
+        }
