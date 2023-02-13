@@ -33,14 +33,6 @@ class SaveAndLoadMixin:
 
         return o
 
-class RegistryMixin:
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        if hasattr(cls, "alias"):
-            cls.registry[cls.alias] = cls
-        if hasattr(cls, "aliases"):
-            cls.registry.update({alias: cls for alias in cls.aliases})
-
 
 class ReprMixin:
     def __repr__(self) -> str:
