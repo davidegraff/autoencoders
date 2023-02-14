@@ -5,6 +5,10 @@ import torch
 from torch import Tensor, nn
 
 from ae_utils.utils import Configurable, DistanceFunction, ContrastiveLoss, build_ffn
+from ae_utils.utils.distances import DistanceFunctionRegistry
+from ae_utils.utils.registry import ClassRegistry
+
+SupervisorRegistry = ClassRegistry()
 
 
 class Supervisor(nn.Module, Configurable):
@@ -26,6 +30,8 @@ class Supervisor(nn.Module, Configurable):
             if the input dimension is not valid
         """
 
+
+@SupervisorRegistry.register("dummy")
 class DummySupervisor(Supervisor):
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:
         return torch.tensor(0.0)
@@ -37,6 +43,7 @@ class DummySupervisor(Supervisor):
         return {}
 
 
+@SupervisorRegistry.register("regression")
 class RegressionSupervisor(Supervisor):
     def __init__(self, input_dim: int, output_dim: int, hidden_dims: Optional[int] = None):
         super().__init__()
@@ -67,6 +74,7 @@ class RegressionSupervisor(Supervisor):
         }
 
 
+@SupervisorRegistry.register("cont")
 class ContrastiveSupervisor(Supervisor):
     def __init__(
         self, df_x: Optional[DistanceFunction] = None, df_y: Optional[DistanceFunction] = None
@@ -84,4 +92,23 @@ class ContrastiveSupervisor(Supervisor):
         return
     
     def to_config(self) -> dict:
-        return {"df_x": self.cont_metric.df_x, "df_y": self.cont_metric.df_y}
+        return {
+            "df_x": {
+                "alias": self.cont_metric.df_x.alias, "config": self.cont_metric.df_x.to_config()
+            },
+            "df_y": {
+                "alias": self.cont_metric.df_y.alias, "config": self.cont_metric.df_y.to_config()
+            }
+        }
+
+    @classmethod
+    def from_config(cls, config: dict) -> Configurable:
+        df_x_alias = config["df_x"]["alias"]
+        df_x_config = config["df_x"]["config"]
+        df_x = DistanceFunctionRegistry[df_x_alias].from_config(df_x_config)
+
+        df_y_alias = config["df_y"]["alias"]
+        df_y_config = config["df_y"]["config"]
+        df_y = DistanceFunctionRegistry[df_y_alias].from_config(df_y_config)
+
+        return cls(df_x, df_y)

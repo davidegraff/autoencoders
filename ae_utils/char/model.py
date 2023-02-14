@@ -14,7 +14,7 @@ from ae_utils.utils import Configurable, LoggingMixin, SaveAndLoadMixin
 from ae_utils.modules import RnnEncoder, RnnDecoder
 from ae_utils.schedulers import LinearScheduler, Scheduler, ConstantScheduler, SchedulerRegistry
 from ae_utils.char.tokenizer import Tokenizer
-from ae_utils.supervisors import Supervisor, DummySupervisor
+from ae_utils.supervisors import Supervisor, DummySupervisor, SupervisorRegistry
 
 block = BlockLogs()
 warnings.filterwarnings("ignore", "Trying to infer the `batch_size`", UserWarning)
@@ -218,8 +218,10 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
             "tokenizer": self.tokenizer.to_config(),
             "encoder": self.encoder.to_config(),
             "decoder": self.decoder.to_config(),
+            "supervisor": {"alias": self.supervisor.alias, "config": self.supervisor.to_config()},
             "lr": self.lr,
             "v_reg": {"alias": self.v_reg.alias, "config": self.v_reg.to_config()},
+            "v_sup": {"alias": self.v_sup.alias, "config": self.v_sup.to_config()},
             "shared_enb": self.encoder.emb is self.decoder.emb,
         }
 
@@ -231,13 +233,32 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         tok = Tokenizer.from_config(config["tokenizer"])
         enc = RnnEncoder.from_config(config["encoder"])
         dec = RnnDecoder.from_config(config["decoder"])
-        lr = config["lr"]
 
-        v_reg_alias = config["v_reg"]["alias"]
-        v_reg_config = config["v_reg"]["config"]
-        v_reg = SchedulerRegistry[v_reg_alias].from_config(v_reg_config)
+        args = [tok, enc, dec]
+        kwargs = {}
 
-        if config["shared_emb"] and enc_emb_config == dec_emb_config:
+        if "supervisor" in config:
+            sup_alias = config["supervisor"]["alias"]
+            sup_config = config["supervisor"]["config"]
+            sup = SupervisorRegistry[sup_alias].from_config(sup_config)
+            kwargs["supervisor"] = sup
+
+        if "lr" in config:
+            kwargs["lr"] = config["lr"]
+
+        if "v_reg" in config:
+            v_reg_alias = config["v_reg"]["alias"]
+            v_reg_config = config["v_reg"]["config"]
+            v_reg = SchedulerRegistry[v_reg_alias].from_config(v_reg_config)
+            kwargs["v_reg"] = v_reg
+
+        if "v_sup" in config:
+            v_sup_alias = config["v_sup"]["alias"]
+            v_sup_config = config["v_sup"]["config"]
+            v_sup = SchedulerRegistry[v_sup_alias].from_config(v_sup_config)
+            kwargs["v_sup"] = v_sup
+
+        if config.get("shared_emb", True) and enc_emb_config == dec_emb_config:
             enc.emb = dec.emb
 
-        return cls(tok, enc, dec, lr, v_reg)
+        return cls(*args, **kwargs)

@@ -4,11 +4,12 @@ import torch
 from torch import Tensor, nn
 
 from ae_utils.utils.registry import ClassRegistry
+from ae_utils.utils.config import Configurable
 
 DistanceFunctionRegistry = ClassRegistry()
 
 
-class DistanceFunction(nn.Module):
+class DistanceFunction(nn.Module, Configurable):
     @abstractmethod
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
         """
@@ -26,6 +27,9 @@ class DistanceFunction(nn.Module):
             distance function `d(X[i], Y[j])`
         """
 
+    def to_config(self) -> dict:
+        return {}
+
 
 @DistanceFunctionRegistry.register("cosine")
 class CosineDistance(DistanceFunction):
@@ -39,10 +43,14 @@ class CosineDistance(DistanceFunction):
 
 @DistanceFunctionRegistry.register("pnorm")
 class PNormDistance(DistanceFunction):
-    def __init__(self, p: int = 2):
+    def __init__(self, p: float = 2):
         super().__init__()
 
         self.p = p
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
         return torch.cdist(X, Y, self.p)
+
+    def to_config(self) -> dict:
+        return {"p": self.p}
+    
