@@ -53,4 +53,3 @@ class PNormDistance(DistanceFunction):
 
     def to_config(self) -> dict:
         return {"p": self.p}
-    

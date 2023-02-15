@@ -53,7 +53,7 @@ class SupervisedDataset(Dataset):
 
     def __len__(self) -> int:
         return len(self.dset)
-    
+
     def __getitem__(self, i: int) -> tuple[Tensor, Tensor]:
         return self.dset[i], self.Y[i]
 

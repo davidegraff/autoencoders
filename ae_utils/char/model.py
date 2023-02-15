@@ -96,12 +96,12 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self.decoder = decoder
         self.supervisor = supervisor or DummySupervisor()
         self.lr = lr
-        
+
         self.v_reg = v_reg
         self.v_sup = v_sup
 
         self.rec_metric = nn.CrossEntropyLoss(reduction="sum", ignore_index=self.encoder.PAD)
-        
+
         self.supervisor.check_input_dim(self.d_z)
 
     @property
@@ -111,20 +111,20 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     @property
     def v_reg(self) -> Scheduler:
         return self.__v_reg
-    
+
     @v_reg.setter
     def v_reg(self, v_reg: Union[float, Scheduler, None]):
         if isinstance(v_reg, (int, float)):
             self.__v_reg = Scheduler([v_reg], "reg")
         elif v_reg is None:
-            self.__v_reg = Scheduler(np.linspace(0, 0.1, 21), "reg") 
+            self.__v_reg = Scheduler(np.linspace(0, 0.1, 21), "reg")
         else:
             self.__v_reg = v_reg
 
     @property
     def v_sup(self) -> Scheduler:
         return self.__v_sup
-    
+
     @v_sup.setter
     def v_sup(self, v: Union[float, Scheduler]):
         self.__v_sup = Scheduler([v], "sup") if isinstance(v, (int, float)) else v
@@ -223,11 +223,11 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
             "lr": self.lr,
             "v_reg": {
                 "cyclic": isinstance(self.v_reg, CyclicalScheduler),
-                "config": self.v_reg.to_config()
+                "config": self.v_reg.to_config(),
             },
             "v_sup": {
                 "cyclic": isinstance(self.v_sup, CyclicalScheduler),
-                "config": self.v_sup.to_config()
+                "config": self.v_sup.to_config(),
             },
             "shared_enb": self.encoder.emb is self.decoder.emb,
         }

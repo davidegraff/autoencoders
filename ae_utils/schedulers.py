@@ -37,11 +37,11 @@ class Scheduler(Configurable):
 
     def __len__(self) -> int:
         return len(self.schedule)
-    
+
     @property
     def i(self) -> int:
         return self.__i
-    
+
     @i.setter
     def i(self, i: int) -> int:
         self.__i = self.__i = max(0, i)
@@ -55,11 +55,11 @@ class Scheduler(Configurable):
     @property
     def v_min(self) -> float:
         return self.schedule[0]
-    
+
     @property
     def v_max(self) -> float:
         return self.schedule[-1]
-    
+
     def step(self) -> float:
         """Step the scheduler and return the new weight"""
         self.i += 1
@@ -67,7 +67,7 @@ class Scheduler(Configurable):
 
     def reset(self):
         self.i = 0
-    
+
     def to_config(self) -> dict:
         return {"schedule": self.schedule.tolist(), "i": self.i, "name": self.name}
 
@@ -85,7 +85,7 @@ class Scheduler(Configurable):
         schedule = np.concatenate([[v] * n for n, v in steps_weights])
 
         return cls(schedule)
-    
+
 
 class CyclicalScheduler(Scheduler):
     """A :class:`CyclicalScheduler` cycles back to `v_min` after exhausting the schedule rather than

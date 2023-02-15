@@ -15,7 +15,7 @@ class Supervisor(nn.Module, Configurable):
     @abstractmethod
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:
         """Calculate the supervision loss term.
-        
+
         NOTE: this function _internally_ handles semisupervision. I.e., the targets `Y` should
         contain *both* labeled *and* unlabeled inputs
         """
@@ -23,7 +23,7 @@ class Supervisor(nn.Module, Configurable):
     @abstractmethod
     def check_input_dim(self, input_dim: int):
         """Check that the intended input dimension is valid for this supervisor.
-        
+
         Raises
         ------
         ValueError
@@ -63,7 +63,7 @@ class RegressionSupervisor(Supervisor):
         input_dim = self.ffn[0].in_features
         if input_dim != d_z:
             raise ValueError(f"Invalid input dimensionality! got: {d_z}. expected: {input_dim}")
-        
+
     def to_config(self) -> dict:
         hidden_dims = [layer.out_features for layer in self.ffn[-1]] if len(self.ffn) > 1 else None
 
@@ -90,15 +90,17 @@ class ContrastiveSupervisor(Supervisor):
 
     def check_input_dim(self, d_z: int):
         return
-    
+
     def to_config(self) -> dict:
         return {
             "df_x": {
-                "alias": self.cont_metric.df_x.alias, "config": self.cont_metric.df_x.to_config()
+                "alias": self.cont_metric.df_x.alias,
+                "config": self.cont_metric.df_x.to_config(),
             },
             "df_y": {
-                "alias": self.cont_metric.df_y.alias, "config": self.cont_metric.df_y.to_config()
-            }
+                "alias": self.cont_metric.df_y.alias,
+                "config": self.cont_metric.df_y.to_config(),
+            },
         }
 
     @classmethod
