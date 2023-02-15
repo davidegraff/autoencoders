@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Sequence, Union
 import warnings
 
+import numpy as np
 import pytorch_lightning as pl
 from rdkit import Chem
 from rdkit.rdBase import BlockLogs
@@ -12,7 +13,7 @@ from torch.nn.utils import rnn
 
 from ae_utils.utils import Configurable, LoggingMixin, SaveAndLoadMixin
 from ae_utils.modules import RnnEncoder, RnnDecoder
-from ae_utils.schedulers import LinearScheduler, Scheduler, ConstantScheduler, SchedulerRegistry
+from ae_utils.schedulers import CyclicalScheduler, Scheduler
 from ae_utils.char.tokenizer import Tokenizer
 from ae_utils.supervisors import Supervisor, DummySupervisor, SupervisorRegistry
 
@@ -46,7 +47,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
 
         * `Scheduler`: the scheduler to use
         * `float`: use a constant weight schedule (i.e., no scheudle)
-        * `None`: use a `~autoencoders.char.schedulers.LinearScheduler` from 0->0.1 over 20 epochs
+        * `None`: use a `~autoencoders.char.schedulers.Scheduler` from 0->0.1 over 20 epochs
 
     v_sup : Union[float, Scheduler], default=0
         the supervision loss weight scheduler. One of:
@@ -114,9 +115,9 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     @v_reg.setter
     def v_reg(self, v_reg: Union[float, Scheduler, None]):
         if isinstance(v_reg, (int, float)):
-            self.__v_reg = ConstantScheduler(v_reg, "reg")
+            self.__v_reg = Scheduler([v_reg], "reg")
         elif v_reg is None:
-            self.__v_reg = LinearScheduler(0, 0.1, 20, "reg") 
+            self.__v_reg = Scheduler(np.linspace(0, 0.1, 21), "reg") 
         else:
             self.__v_reg = v_reg
 
@@ -126,7 +127,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     
     @v_sup.setter
     def v_sup(self, v: Union[float, Scheduler]):
-        self.__v_sup = ConstantScheduler(v, "sup") if isinstance(v, (int, float)) else v
+        self.__v_sup = Scheduler([v], "sup") if isinstance(v, (int, float)) else v
 
     def encode(self, xs: Sequence[Tensor]) -> Tensor:
         return self.encoder(xs)
@@ -220,8 +221,14 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
             "decoder": self.decoder.to_config(),
             "supervisor": {"alias": self.supervisor.alias, "config": self.supervisor.to_config()},
             "lr": self.lr,
-            "v_reg": {"alias": self.v_reg.alias, "config": self.v_reg.to_config()},
-            "v_sup": {"alias": self.v_sup.alias, "config": self.v_sup.to_config()},
+            "v_reg": {
+                "cyclic": isinstance(self.v_reg, CyclicalScheduler),
+                "config": self.v_reg.to_config()
+            },
+            "v_sup": {
+                "cyclic": isinstance(self.v_sup, CyclicalScheduler),
+                "config": self.v_sup.to_config()
+            },
             "shared_enb": self.encoder.emb is self.decoder.emb,
         }
 
@@ -247,15 +254,15 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
             kwargs["lr"] = config["lr"]
 
         if "v_reg" in config:
-            v_reg_alias = config["v_reg"]["alias"]
-            v_reg_config = config["v_reg"]["config"]
-            v_reg = SchedulerRegistry[v_reg_alias].from_config(v_reg_config)
+            sched_cls = CyclicalScheduler if config["v_reg"]["cyclic"] else Scheduler
+            config = config["v_reg"]["config"]
+            v_reg = sched_cls.from_config(config)
             kwargs["v_reg"] = v_reg
 
         if "v_sup" in config:
-            v_sup_alias = config["v_sup"]["alias"]
-            v_sup_config = config["v_sup"]["config"]
-            v_sup = SchedulerRegistry[v_sup_alias].from_config(v_sup_config)
+            sched_cls = CyclicalScheduler if config["v_sup"]["cyclic"] else Scheduler
+            config = config["v_sup"]["config"]
+            v_sup = sched_cls.from_config(config)
             kwargs["v_sup"] = v_sup
 
         if config.get("shared_emb", True) and enc_emb_config == dec_emb_config:
