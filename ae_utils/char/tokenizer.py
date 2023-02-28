@@ -114,8 +114,8 @@ class Tokenizer(Configurable):
     @classmethod
     def from_config(cls, config: dict):
         st = SpecialTokens(**config["st"])
-
         config = config | dict(st=st)
+
         return cls(**config)
 
     @classmethod
@@ -144,5 +144,5 @@ class Tokenizer(Configurable):
 
     @classmethod
     def smiles_tokenizer(cls, st: SpecialTokens = SpecialTokens()) -> Tokenizer:
-        """build a tokenizer for SMILES strings"""
+        """a tokenizer for SMILES strings"""
         return cls(_SMILES_PATTERN, _SMILES_VOCAB, st)
