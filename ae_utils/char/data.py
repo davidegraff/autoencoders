@@ -50,7 +50,7 @@ class SemisupervisedDataset(Dataset):
         mask = torch.isfinite(Y)
 
         self.dset = dset
-        self.Y = (Y - Y[mask].mean(1)) / Y[mask].std(1) if normalize else Y
+        self.Y = (Y - Y[mask].mean(0)) / Y[mask].std(0) if normalize else Y
 
     def __len__(self) -> int:
         return len(self.dset)

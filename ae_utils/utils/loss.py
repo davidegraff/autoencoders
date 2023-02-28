@@ -23,6 +23,8 @@ class ContrastiveLoss(LossFunction):
     def __init__(
         self, df_x: Optional[DistanceFunction] = None, df_y: Optional[DistanceFunction] = None
     ):
+        super().__init__()
+        
         self.df_x = df_x or CosineDistance()
         self.df_y = df_y or PNormDistance(torch.inf)
 
