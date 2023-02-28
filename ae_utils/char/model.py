@@ -183,9 +183,11 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
 
     def on_train_epoch_start(self):
         self.log(f"v/{self.v_reg.name}", self.v_reg.v)
-
+        self.log(f"v/{self.v_sup.name}", self.v_sup.v)
+        
     def training_epoch_end(self, *args):
         self.v_reg.step()
+        self.v_sup.step()
 
     def validation_epoch_end(self, outputs):
         *losses, sizes = torch.tensor(outputs).split(1, 1)
