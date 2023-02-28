@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from abc import abstractmethod
 
+import torch
 from torch import Tensor, nn
 from torch.distributions import Distribution, Categorical
+from torch.nn import functional as F
 
 from ae_utils.utils import ClassRegistry, Configurable
 from ae_utils.utils.config import warn_not_serializable
@@ -57,6 +59,51 @@ class MultinomialSampler(Sampler):
 
     def sample(self, probs: Tensor) -> Tensor:
         return Categorical(probs).sample()
+
+
+@SamplerRegistry.register("topk")
+class TopKSampler(MultinomialSampler):
+    """A `TopKSampler` samples _only_ from the top-`k` inputs using multinomial sampling"""
+
+    def __init__(self, k: int):
+        super().__init__()
+
+        self.k = k
+
+    def forward(self, logits: Tensor) -> Tensor:
+        logits, idxs_orig = torch.topk(logits, self.k, dim=-1)
+
+        idxs_new = super().forward(logits)
+        return idxs_orig[range(len(logits)), ..., idxs_new]
+
+
+@SamplerRegistry.register("nucleus")
+class NucleusSampler(MultinomialSampler):
+    """A `NucleusSampler` samples from the smallest number of inputs such that the summed
+    probablity is greater than or equal to an input threshold [1]_
+
+    E.g., for a given vector of probabilities `x = [0.3, 0.2, 0.4, 0.1]` and `threshold = 0.4`, then
+    nucleus sampling will sample only indices 0 and 3 (as their summed probabiliy is equal to
+    `0.4`). If `threshold = 0.5`, then it will sample among indices 0, 1, and 3 (as the summed
+    probability is equal to `0.6`)
+
+    References
+    ----------
+    .. [1] Holtzman, A.; Buys, J., Du; L., Forbes, M.; & Choi, Y.  "The curious case of neural text degeneration." arXiv:1904.09751 [cs.CL], 2019.
+    """
+
+    def __init__(self, threshold: float):
+        super().__init__()
+
+        self.threshold = threshold
+
+    def sample(self, probs: Tensor) -> Tensor:
+        probs_sorted, idxs_orig = probs.sort(-1, descending=True)
+        cdf = probs_sorted.cumsum(-1)
+        mask = F.pad(cdf < self.threshold, pad=(1, 0), value=True)[:, :-1]
+
+        idxs_new = super().sample(probs_sorted * mask)
+        return idxs_orig[range(len(probs)), idxs_new]
 
 
 @SamplerRegistry.register("noisy")
