@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 from typing_extensions import Self
 
-import pytorch_lightning as pl
 import torch
 
 
@@ -30,7 +29,7 @@ class SaveAndLoadMixin:
         p_state_dict = save_dir / "model.pt"
         p_config = save_dir / "model.json"
 
-        o: pl.LightningModule = cls.from_config(json.loads(p_config.read_text()))
+        o = cls.from_config(json.loads(p_config.read_text()))
         o.load_state_dict(torch.load(p_state_dict))
 
         return o
