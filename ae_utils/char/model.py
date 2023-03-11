@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional, Sequence, Union
+from typing_extensions import Self
 import warnings
 
 import numpy as np
@@ -235,7 +236,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         }
 
     @classmethod
-    def from_config(cls, config: dict) -> LitCVAE:
+    def from_config(cls, config: dict) -> Self:
         enc_emb_config = config["encoder"]["embedding"]
         dec_emb_config = config["decoder"]["embedding"]
 
