@@ -25,6 +25,8 @@ class KernelFunction(nn.Module):
 
 class InverseMultiQuadraticKernel(KernelFunction):
     def __init__(self, c: float = 1):
+        super().__init__()
+        
         self.c = c
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:

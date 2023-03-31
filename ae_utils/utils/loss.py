@@ -35,6 +35,8 @@ class ContrastiveLoss(LossFunction):
 @LossRegistry.register("mmd")
 class MMDLoss(LossFunction):
     def __init__(self, kernel: KernelFunction):
+        super().__init__()
+        
         self.kernel = kernel
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:

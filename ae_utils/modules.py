@@ -54,7 +54,7 @@ class RnnEncoder(nn.Module, Configurable):
     def PAD(self) -> int:
         return self.emb.padding_idx
 
-    def _forward(self, xs: Iterable[Tensor]) -> Tensor:
+    def encode(self, xs: Iterable[Tensor]) -> Tensor:
         xs_emb = [self.emb(x) for x in xs]
         X = rnn.pack_sequence(xs_emb, enforce_sorted=False)
 
@@ -64,10 +64,10 @@ class RnnEncoder(nn.Module, Configurable):
         return torch.cat(H.split(1), -1).squeeze(0)
 
     def forward(self, xs: Sequence[Tensor]) -> Tensor:
-        return self.reg(self._forward(xs))
+        return self.reg(self.encode(xs))[0]
 
-    def forward_step(self, xs: Sequence[Tensor]) -> tuple[Tensor, Tensor]:
-        return self.reg.forward_step(self._forward(xs))
+    def train_step(self, xs: Sequence[Tensor]) -> tuple[Tensor, Tensor]:
+        return self.reg.train_step(self.encode(xs))
 
     def to_config(self) -> dict:
         config = {
@@ -129,7 +129,7 @@ class RnnDecoder(nn.Module, Configurable):
     def PAD(self) -> int:
         return self.emb.padding_idx
 
-    def forward_step(self, xs: Sequence[Tensor], Z: Tensor) -> Tensor:
+    def train_step(self, xs: Sequence[Tensor], Z: Tensor) -> Tensor:
         lengths = [len(x) for x in xs]
         X = rnn.pad_sequence(xs, batch_first=True, padding_value=self.PAD)
 

@@ -132,7 +132,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
 
     def encode(self, xs: Sequence[Tensor]) -> Tensor:
         return self.encoder(xs)
-
+    
     def decode(self, Z: Tensor, max_len: int = 80) -> list[Tensor]:
         return self.decoder(Z, max_len)
 
@@ -149,8 +149,8 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     def training_step(self, batch: Sequence[Tensor], batch_idx) -> Tensor:
         xs, Y = batch
 
-        Z, l_reg = self.encoder.forward_step(xs)
-        X_logits = self.decoder.forward_step(xs, Z)
+        Z, l_reg = self.encoder.train_step(xs)
+        X_logits = self.decoder.train_step(xs, Z)
 
         X_logits_packed = X_logits[:, :-1].contiguous().view(-1, X_logits.shape[-1])
         X_packed = rnn.pad_sequence(xs, True, self.decoder.PAD)[:, 1:].contiguous().view(-1)
@@ -167,8 +167,8 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
     def validation_step(self, batch: Sequence[Tensor], batch_idx):
         xs, Y = batch
 
-        Z, l_reg = self.encoder.forward_step(xs)
-        X_logits = self.decoder.forward_step(xs, Z)
+        Z, l_reg = self.encoder.train_step(xs)
+        X_logits = self.decoder.train_step(xs, Z)
 
         X_logits_packed = X_logits[:, :-1].contiguous().view(-1, X_logits.shape[-1])
         X_packed = rnn.pad_sequence(xs, True, self.decoder.PAD)[:, 1:].contiguous().view(-1)

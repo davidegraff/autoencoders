@@ -48,7 +48,7 @@ class Regularizer(nn.Module, Configurable):
         """Project the output of the encoder into the latent space and regularize it"""
 
     @abstractmethod
-    def forward_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
+    def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
         """Calculate both the regularized latent representation (i.e., `forward()`) and associated
         loss of the encoder output"""
 
@@ -60,9 +60,6 @@ class Regularizer(nn.Module, Configurable):
 class DummyRegularizer(Regularizer):
     """A :class:`DummyRegularizer` calculates no regularization loss"""
 
-    def __init__(self, d_z: int):
-        super().__init__(d_z)
-
     @classmethod
     @property
     def name(self) -> str:
@@ -72,10 +69,10 @@ class DummyRegularizer(Regularizer):
         self.q_h2z_mean = nn.Linear(d_h, self.d_z)
 
     def forward(self, H: Tensor) -> Tensor:
-        return self.q_h2z_mean(H)
+        return self.q_h2z_mean(H)[None, :]
 
-    def forward_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
-        return self(H), torch.tensor(0.0)
+    def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
+        return self(H)[0], torch.tensor(0.0)
 
 
 @RegularizerRegistry.register("vae")
@@ -107,14 +104,14 @@ class VariationalRegularizer(DummyRegularizer):
         super().setup(d_h)
         self.q_h2z_logvar = nn.Linear(d_h, self.d_z)
 
-    def forward(self, H: Tensor):
-        Z_mean, Z_logvar = self.q_h2z_mean(H), self.q_h2z_logvar(H)
+    def forward(self, H: Tensor) -> Tensor:
+        return torch.stack((self.q_h2z_mean(H), self.q_h2z_logvar(H)))
+        # Z_mean, Z_logvar = self.q_h2z_mean(H), self.q_h2z_logvar(H)
 
-        return self.reparameterize(Z_mean, Z_logvar)
+        # return self.reparameterize(Z_mean, Z_logvar)
 
-    def forward_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
-        Z_mean, Z_logvar = self.q_h2z_mean(H), self.q_h2z_logvar(H)
-
+    def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
+        Z_mean, Z_logvar = self.forward(H)
         Z = self.reparameterize(Z_mean, Z_logvar)
         # NOTE(degraff): switch following line for arbitrary priors
         l_kl = 0.5 * (Z_mean**2 + Z_logvar.exp() - 1 - Z_logvar).sum(1).mean()
@@ -160,8 +157,8 @@ class WassersteinRegularizer(DummyRegularizer):
     def name(self) -> str:
         return "mmd"
 
-    def forward_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
-        Z = self(H)
+    def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
+        Z = self(H)[0]
 
         Z_prior = self.prior.sample(Z.shape).to(Z.device)
         l_mmd = self.mmd_metric(Z, Z_prior)
