@@ -17,7 +17,7 @@ class SaveAndLoadMixin:
     def save(self, save_dir: PathLike):
         save_dir = Path(save_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
-        
+
         p_state_dict = save_dir / "model.pt"
         p_config = save_dir / "model.json"
 

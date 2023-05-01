@@ -1,4 +1,4 @@
-from typing import Iterable, Optional
+from typing import Iterable
 
 import numpy as np
 import torch
@@ -45,7 +45,7 @@ class SemisupervisedDataset(Dataset):
                 "args 'dset' and 'Y' must have same length! "
                 f"got: {len(dset)}, {len(Y)}, respectively."
             )
-        
+
         Y: Tensor = torch.from_numpy(Y).float()
         mask = torch.isfinite(Y)
 

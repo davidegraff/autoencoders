@@ -24,7 +24,7 @@ class ContrastiveLoss(LossFunction):
         self, df_x: Optional[DistanceFunction] = None, df_y: Optional[DistanceFunction] = None
     ):
         super().__init__()
-        
+
         self.df_x = df_x or CosineDistance()
         self.df_y = df_y or PNormDistance(torch.inf)
 
@@ -36,7 +36,7 @@ class ContrastiveLoss(LossFunction):
 class MMDLoss(LossFunction):
     def __init__(self, kernel: KernelFunction):
         super().__init__()
-        
+
         self.kernel = kernel
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
