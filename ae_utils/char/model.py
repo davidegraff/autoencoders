@@ -5,7 +5,7 @@ from typing_extensions import Self
 import warnings
 
 import numpy as np
-from lightning import pytorch as pl
+import pytorch_lightning as pl
 from rdkit import Chem
 from rdkit.rdBase import BlockLogs
 import torch
