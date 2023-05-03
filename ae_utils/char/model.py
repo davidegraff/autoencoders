@@ -5,7 +5,7 @@ from typing_extensions import Self
 import warnings
 
 import numpy as np
-import pytorch_lightning as pl
+from lightning import pytorch as pl
 from rdkit import Chem
 from rdkit.rdBase import BlockLogs
 import torch
@@ -186,11 +186,11 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self.log(f"v/{self.v_reg.name}", self.v_reg.v)
         self.log(f"v/{self.v_sup.name}", self.v_sup.v)
 
-    def training_epoch_end(self, *args):
+    def on_train_epoch_end(self, *args):
         self.v_reg.step()
         self.v_sup.step()
 
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self, outputs):
         *losses, sizes = torch.tensor(outputs).split(1, 1)
         l_rec, l_reg, l_sup, acc = ((l * sizes).sum() / sizes.sum() for l in losses)
         metrics = dict(rec=l_rec, reg=l_reg, sup=l_sup, loss=l_rec + l_reg + l_sup, acc=acc)
