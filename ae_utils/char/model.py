@@ -104,7 +104,8 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self.rec_metric = nn.CrossEntropyLoss(reduction="sum", ignore_index=self.encoder.PAD)
 
         self.supervisor.check_input_dim(self.d_z)
-
+        self.validation_step_outputs = []
+        
     @property
     def d_z(self) -> int:
         return self.encoder.d_z
@@ -177,7 +178,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         l_sup = self.supervisor(Z, Y)
         acc = sum(map(torch.equal, xs, self.reconstruct(xs))) / len(xs)
 
-        return l_rec, l_reg, l_sup, acc, len(xs)
+        self.validation_step_outputs.append((l_rec, l_reg, l_sup, acc, len(xs)))
 
     def predict_step(self, batch, batch_idx: int, dataloader_idx=0) -> Tensor:
         return self.encode(batch)
@@ -186,12 +187,12 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self.log(f"v/{self.v_reg.name}", self.v_reg.v)
         self.log(f"v/{self.v_sup.name}", self.v_sup.v)
 
-    def on_train_epoch_end(self, *args):
+    def on_train_epoch_end(self):
         self.v_reg.step()
         self.v_sup.step()
 
-    def on_validation_epoch_end(self, outputs):
-        *losses, sizes = torch.tensor(outputs).split(1, 1)
+    def on_validation_epoch_end(self):
+        *losses, sizes = torch.tensor(self.validation_step_outputs).split(1, 1)
         l_rec, l_reg, l_sup, acc = ((l * sizes).sum() / sizes.sum() for l in losses)
         metrics = dict(rec=l_rec, reg=l_reg, sup=l_sup, loss=l_rec + l_reg + l_sup, acc=acc)
 
@@ -200,6 +201,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         metrics.update({f"valid@{n//1000}k": f_valid, f"unique@{n//1000}k": f_unique})
 
         self._log_split("val", metrics)
+        self.validation_step_outputs.clear()
 
     def configure_optimizers(self):
         params = set(self.encoder.parameters())
