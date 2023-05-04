@@ -1,8 +1,11 @@
-from typing import Iterable, Iterator, Mapping, Type, Union
-
+from collections.abc import Mapping
+from typing import Iterable, Iterator, Type, Union
+import pprint
 
 class ClassRegistry(Mapping[str, Type]):
     def __init__(self):
+        super().__init__()
+
         self.__registry = {}
 
     def register(self, alias: Union[str, Iterable[str], None] = None):
@@ -32,3 +35,16 @@ class ClassRegistry(Mapping[str, Type]):
 
     def __len__(self) -> int:
         return len(self.__registry)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}: {self.__registry}"
+
+    def __str__(self) -> str:
+        indent = 4
+        lines = [
+            "ClassRegistry {",
+            *[f"{' ' * indent}{repr(k)}: {repr(v)}," for k, v in self.__registry.items()],
+            "}"
+        ]
+
+        return "\n".join(lines)
