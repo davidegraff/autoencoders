@@ -41,10 +41,6 @@ class ClassRegistry(Mapping[str, Type]):
 
     def __str__(self) -> str:
         indent = 4
-        lines = [
-            "ClassRegistry {",
-            *[f"{' ' * indent}{repr(k)}: {repr(v)}," for k, v in self.__registry.items()],
-            "}"
-        ]
+        items = [f"{' ' * indent}{repr(k)}: {repr(v)}" for k, v in self.__registry.items()]
 
-        return "\n".join(lines)
+        return "\n".join(["ClassRegistry {", ",\n".join(items), "}"])
