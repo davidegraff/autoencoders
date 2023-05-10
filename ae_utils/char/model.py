@@ -72,7 +72,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         supervisor: Optional[Supervisor] = None,
         lr: float = 3e-4,
         v_reg: Union[float, Scheduler, None] = None,
-        v_sup: Union[float, Scheduler] = 0,
+        v_sup: Union[float, Scheduler] = 0.0,
     ):
         super().__init__()
 
