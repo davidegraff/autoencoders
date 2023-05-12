@@ -1,6 +1,6 @@
 from .config import Configurable
 from .distances import DistanceFunction, CosineDistance
-from .kernels import KernelFunction, InverseMultiQuadraticKernel, IMQKernel
+from .kernels import KernelRegistry, KernelFunction, InverseMultiQuadraticKernel, IMQKernel
 from .loss import LossFunction, MMDLoss, ContrastiveLoss
 from .mixins import LoggingMixin, SaveAndLoadMixin, ReprMixin
 from .registry import ClassRegistry

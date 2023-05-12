@@ -2,11 +2,12 @@ from abc import abstractmethod
 from typing import Optional
 
 import torch
-from torch import Tensor, nn
+from torch import Tensor, nn, functional as F
 
-from ae_utils.utils import Configurable, DistanceFunction, ContrastiveLoss, build_ffn
-from ae_utils.utils.distances import DistanceFunctionRegistry
-from ae_utils.utils.registry import ClassRegistry
+from ae_utils.utils import Configurable, ClassRegistry, build_ffn
+from ae_utils.utils.distances import (
+    DistanceFunction, CosineDistance, PNormDistance, DistanceFunctionRegistry
+)
 
 SupervisorRegistry = ClassRegistry()
 
@@ -17,7 +18,7 @@ class Supervisor(nn.Module, Configurable):
         """Calculate the supervision loss term.
 
         NOTE: this function _internally_ handles semisupervision. I.e., the targets `Y` should
-        contain *both* labeled *and* unlabeled inputs
+        contain *both* labeled and unlabeled inputs
         """
 
     @abstractmethod
@@ -81,12 +82,19 @@ class ContrastiveSupervisor(Supervisor):
     ):
         super().__init__()
 
-        self.cont_metric = ContrastiveLoss(df_x, df_y)
+        self.df_x = df_x or CosineDistance()
+        self.df_y = df_y or PNormDistance(torch.inf)
 
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:
-        mask = Y.isfinite().any(1)
+        mask = Y.isfinite().all(1)
 
-        return self.cont_metric(Z[mask], Y[mask]) if mask.any() else torch.tensor(0.0)
+        if not mask.any():
+            return torch.tensor(0.0)
+
+        Z = Z[mask]
+        Y = Y[mask]
+
+        return F.mse_loss(self.df_x(Z, Z), self.df_y(Y, Y), reduction="mean")
 
     def check_input_dim(self, d_z: int):
         return

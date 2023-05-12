@@ -3,8 +3,12 @@ from abc import abstractmethod
 import torch
 from torch import Tensor, nn
 
+from ae_utils.utils import Configurable, ClassRegistry
 
-class KernelFunction(nn.Module):
+KernelRegistry = ClassRegistry()
+
+
+class KernelFunction(nn.Module, Configurable):
     @abstractmethod
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
         """
@@ -23,6 +27,7 @@ class KernelFunction(nn.Module):
         """
 
 
+@KernelRegistry.register("imq")
 class InverseMultiQuadraticKernel(KernelFunction):
     def __init__(self, c: float = 1):
         super().__init__()
@@ -30,9 +35,12 @@ class InverseMultiQuadraticKernel(KernelFunction):
         self.c = c
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
-        L2_sq = torch.cdist(X, Y) ** 2
+        L2_sq = torch.cdist(X, Y).square()
 
         return self.c / (self.c + L2_sq)
+
+    def to_config(self) -> dict:
+        return {"c": self.c}
 
 
 IMQKernel = InverseMultiQuadraticKernel

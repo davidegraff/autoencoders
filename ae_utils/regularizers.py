@@ -7,14 +7,8 @@ import torch
 from torch import Tensor, nn
 from torch.distributions import Distribution, Normal
 
-from ae_utils.utils import (
-    ClassRegistry,
-    Configurable,
-    KernelFunction,
-    InverseMultiQuadraticKernel,
-    MMDLoss,
-)
-from ae_utils.utils.config import warn_not_serializable
+from ae_utils.utils import ClassRegistry, Configurable, warn_not_serializable
+from ae_utils.utils.kernels import KernelFunction, InverseMultiQuadraticKernel, KernelRegistry
 
 __all__ = ["Regularizer", "RegularizerRegistry", "DummyRegularizer", "VariationalRegularizer"]
 
@@ -148,8 +142,7 @@ class WassersteinRegularizer(DummyRegularizer):
     ):
         super().__init__(d_z)
 
-        kernel = kernel or InverseMultiQuadraticKernel(2 * self.d_z)
-        self.mmd_metric = MMDLoss(kernel)
+        self.kernel = kernel or InverseMultiQuadraticKernel(2 * self.d_z)
         self.prior = prior or Normal(0, 1)
 
     @classmethod
@@ -161,10 +154,33 @@ class WassersteinRegularizer(DummyRegularizer):
         Z = self(H)[0]
 
         Z_prior = self.prior.sample(Z.shape).to(Z.device)
-        l_mmd = self.mmd_metric(Z, Z_prior)
+        l_mmd = self.mmd_loss(Z, Z_prior)
 
         return Z, l_mmd
 
+    def MMD_loss(self, X, Y):
+        K_xx = self.kernel(X, X)
+        K_yy = self.kernel(Y, Y)
+        K_xy = self.kernel(X, Y)
+
+        return self.tril_mean(K_xx) + self.tril_mean(K_yy) - 2 * K_xy.mean()
+
+    @staticmethod
+    def tril_mean(A: Tensor, offset: int = -1):
+        """The mean of the lower triangular (given the input offset) elements in the tensor `A`"""
+        idxs = torch.tril_indices(*A.shape, offset).unbind()
+
+        return A[idxs].mean()
+
     @warn_not_serializable
     def to_config(self) -> dict:
-        return {"d_z": self.d_z, "kernel": self.mmd_metric.kernel, "prior": self.prior}
+        kernel_config = {"alias": self.kernel.alias, "config": self.kernel.to_config()}
+
+        return {"d_z": self.d_z, "kernel": kernel_config, "prior": self.prior}
+
+    @classmethod
+    def from_config(cls, config: dict) -> Configurable:
+        kernel = KernelRegistry[config["kernel"]["alias"]].from_config(config["kernel"]["config"])
+        config = config | {"kernel": kernel}
+
+        return cls(**config)

@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from typing import Iterable, Iterator, Type, Union
-import pprint
+
 
 class ClassRegistry(Mapping[str, Type]):
     def __init__(self):

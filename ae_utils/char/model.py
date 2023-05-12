@@ -105,7 +105,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
 
         self.supervisor.check_input_dim(self.d_z)
         self.validation_step_outputs = []
-        
+
     @property
     def d_z(self) -> int:
         return self.encoder.d_z
