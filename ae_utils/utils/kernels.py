@@ -3,7 +3,8 @@ from abc import abstractmethod
 import torch
 from torch import Tensor, nn
 
-from ae_utils.utils import Configurable, ClassRegistry
+from ae_utils.utils.config import Configurable
+from ae_utils.utils.registry import ClassRegistry
 
 KernelRegistry = ClassRegistry()
 

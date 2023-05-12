@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from typing import Optional
+import warnings
 
 import torch
 from torch import Tensor, nn
@@ -10,6 +11,8 @@ from ae_utils.utils.kernels import KernelFunction
 from ae_utils.utils.registry import ClassRegistry
 
 LossRegistry = ClassRegistry()
+
+warnings.warn("The `LossFunction` module is deprecated!", DeprecationWarning)
 
 
 class LossFunction(nn.Module):
