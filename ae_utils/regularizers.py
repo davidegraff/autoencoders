@@ -8,7 +8,7 @@ from torch import Tensor, nn
 from torch.distributions import Distribution, Normal
 
 from ae_utils.utils import ClassRegistry, Configurable, warn_not_serializable
-from ae_utils.utils.kernels import KernelFunction, InverseMultiQuadraticKernel, KernelRegistry
+from ae_utils.utils.kernels import KernelFunction, KernelRegistry, InverseMultiQuadraticKernel
 
 __all__ = ["Regularizer", "RegularizerRegistry", "DummyRegularizer", "VariationalRegularizer"]
 
