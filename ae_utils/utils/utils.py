@@ -17,7 +17,7 @@ def safe_cross_entropy(logits: Tensor, labels: Tensor, ignore_index: int = -100,
 def build_ffn(
     input_dim: int,
     output_dim: int,
-    hidden_dims: Optional[Iterable[int]] = None,
+    hidden_dims: Iterable[int] | None = None,
     bias: bool = False,
     dropout: float = 0.0,
 ) -> nn.Sequential:

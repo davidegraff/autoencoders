@@ -46,7 +46,7 @@ class DummySupervisor(Supervisor):
 
 @SupervisorRegistry.register("regression")
 class RegressionSupervisor(Supervisor):
-    def __init__(self, input_dim: int, output_dim: int, hidden_dims: Optional[int] = None):
+    def __init__(self, input_dim: int, output_dim: int, hidden_dims: int | None = None):
         super().__init__()
 
         self.ffn = build_ffn(input_dim, output_dim, hidden_dims)
@@ -77,9 +77,7 @@ class RegressionSupervisor(Supervisor):
 
 @SupervisorRegistry.register("cont")
 class ContrastiveSupervisor(Supervisor):
-    def __init__(
-        self, df_x: Optional[DistanceFunction] = None, df_y: Optional[DistanceFunction] = None
-    ):
+    def __init__(self, df_x: DistanceFunction | None = None, df_y: DistanceFunction | None = None):
         super().__init__()
 
         self.df_x = df_x or CosineDistance()

@@ -23,9 +23,7 @@ class LossFunction(nn.Module):
 
 @LossRegistry.register("cont")
 class ContrastiveLoss(LossFunction):
-    def __init__(
-        self, df_x: Optional[DistanceFunction] = None, df_y: Optional[DistanceFunction] = None
-    ):
+    def __init__(self, df_x: DistanceFunction | None = None, df_y: DistanceFunction | None = None):
         super().__init__()
 
         self.df_x = df_x or CosineDistance()

@@ -40,7 +40,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         the encoder module to project from tokenized sequences into the latent space
     decoder : CharDecoder
         the decoder module to generate tokenized sequences from latent representations
-    supervisor : Optional[Supervisor] = None
+    supervisor : Supervisor | None = None
     lr : float, default=3e-4
         the learning rate
     v_reg : Union[float, Scheduler, None], default=None
@@ -69,7 +69,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         tokenizer: Tokenizer,
         encoder: RnnEncoder,
         decoder: RnnDecoder,
-        supervisor: Optional[Supervisor] = None,
+        supervisor: Supervisor | None = None,
         lr: float = 3e-4,
         v_reg: Union[float, Scheduler, None] = None,
         v_sup: Union[float, Scheduler] = 0.0,

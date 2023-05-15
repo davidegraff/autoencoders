@@ -21,7 +21,7 @@ class GrammarDecoder(RnnDecoder):
         d_h: int = 384,
         n_layers: int = 3,
         dropout: float = 0.2,
-        sampler: Optional[Sampler] = None,
+        sampler: Sampler | None = None,
     ):
         super().__init__(SOS, EOS, embedding, d_emb, d_z, d_h, n_layers, dropout, sampler)
         self.G = grammar

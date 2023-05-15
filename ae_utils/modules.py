@@ -22,7 +22,7 @@ class RnnEncoder(nn.Module, Configurable):
         dropout: float = 0.0,
         bidir: bool = True,
         d_z: int = 128,
-        regularizer: Optional[Regularizer] = None,
+        regularizer: Regularizer | None = None,
     ):
         super().__init__()
 
@@ -107,7 +107,7 @@ class RnnDecoder(nn.Module, Configurable):
         d_h: int = 512,
         n_layers: int = 3,
         dropout: float = 0.2,
-        sampler: Optional[Sampler] = None,
+        sampler: Sampler | None = None,
     ):
         super().__init__()
 

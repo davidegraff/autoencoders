@@ -137,8 +137,8 @@ class WassersteinRegularizer(DummyRegularizer):
     def __init__(
         self,
         d_z: int,
-        kernel: Optional[KernelFunction] = None,
-        prior: Optional[Distribution] = None,
+        kernel: KernelFunction | None = None,
+        prior: Distribution | None = None,
     ):
         super().__init__(d_z)
 
