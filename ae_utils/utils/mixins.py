@@ -2,7 +2,7 @@ import inspect
 import json
 from os import PathLike
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Collection, Mapping
 from typing_extensions import Self
 
 import torch
@@ -38,15 +38,17 @@ class SaveAndLoadMixin:
 
 class ReprMixin:
     def __repr__(self) -> str:
-        sig = inspect.signature(self.__init__)
+        items = self.get_params()
+        
+        if len(items) > 0:
+            keys, values = zip(*items)
+            sig = inspect.signature(self.__class__)
+            defaults = [sig.parameters[k].default for k in keys]
+            items = [(k, v) for k, v, d in zip(keys, values, defaults) if v != d]
 
-        keys, values = self.get_params()
-        defaults = [sig.parameters[k].default for k in keys]
-
-        items = [(k, v) for k, v, d in zip(keys, values, defaults) if v != d]
         argspec = ", ".join(f"{k}={repr(v)}" for k, v in items)
 
         return f"{self.__class__.__name__}({argspec})"
 
-    def get_params(self) -> Iterable[tuple[str, Any]]:
-        return self.__dict__.values()
+    def get_params(self) -> Collection[tuple[str, Any]]:
+        return self.__dict__.items()
