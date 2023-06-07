@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Sequence
 
 import torch
 from torch import Tensor, nn
 from torch.nn.utils import rnn
 
 from ae_utils.utils import Configurable
-from ae_utils.samplers import Sampler, SamplerRegistry, ModeSampler
+from ae_utils.samplers import Sampler, SamplerRegistry, GreedySampler
 from ae_utils.regularizers import Regularizer, VariationalRegularizer, RegularizerRegistry
 
 __all__ = ["RnnEncoder", "RnnDecoder"]
@@ -38,8 +38,7 @@ class RnnEncoder(nn.Module, Configurable):
         )
         d_h_rnn = 2 * d_h if bidir else d_h
 
-        self.reg = regularizer or VariationalRegularizer(d_z)
-        self.reg.setup(d_h_rnn)
+        self.reg = regularizer or VariationalRegularizer(d_h_rnn, d_z)
 
     @property
     def d_v(self) -> int:
@@ -48,7 +47,7 @@ class RnnEncoder(nn.Module, Configurable):
 
     @property
     def d_z(self) -> int:
-        return self.reg.d_z
+        return len(self.reg)
 
     @property
     def PAD(self) -> int:
@@ -64,7 +63,7 @@ class RnnEncoder(nn.Module, Configurable):
         return torch.cat(H.split(1), -1).squeeze(0)
 
     def forward(self, xs: Sequence[Tensor]) -> Tensor:
-        return self.reg(self.encode(xs))[0]
+        return self.reg(self.encode(xs))
 
     def train_step(self, xs: Sequence[Tensor]) -> tuple[Tensor, Tensor]:
         return self.reg.train_step(self.encode(xs))
@@ -109,6 +108,27 @@ class RnnDecoder(nn.Module, Configurable):
         dropout: float = 0.2,
         sampler: Sampler | None = None,
     ):
+        """an `RnnDecoder` autoregressively generates sequences starting from an input vector
+
+        Parameters
+        ----------
+        SOS : int
+            the start-of-sequence token
+        EOS : int
+            the end-of-sequence token
+        embedding : nn.Embedding
+            the embedding layer used to embed sequences of inputs into the embedding space
+        d_z : int, default=128
+            the dimension of the input vector
+        d_h : int, default=512
+            the hidden dimension of the GRU
+        n_layers : int, default=3
+            the number of layers in the GRU
+        dropout : float, default=0.2
+            the dropout rate to use during training
+        sampler : Sampler | None, default=None
+            the sampler to use. If None, defaults to using a `GreedySampler`
+        """
         super().__init__()
 
         self.SOS = SOS
@@ -119,7 +139,7 @@ class RnnDecoder(nn.Module, Configurable):
         self.z2h = nn.Linear(self.d_z, d_h)
         self.rnn = nn.GRU(self.emb.embedding_dim, d_h, n_layers, batch_first=True, dropout=dropout)
         self.h2v = nn.Linear(d_h, self.d_v)
-        self.sampler = sampler or ModeSampler()
+        self.sampler = sampler or GreedySampler()
 
     @property
     def d_v(self) -> int:

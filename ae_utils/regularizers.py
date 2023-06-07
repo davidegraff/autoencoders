@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Optional
 
 import torch
 from torch import Tensor, nn
@@ -16,64 +15,90 @@ RegularizerRegistry = ClassRegistry()
 
 
 class Regularizer(nn.Module, Configurable):
-    """A :class:`Regularizer` projects from the encoder output to the latent space and
-    calculates the associated loss of that projection"""
+    """A :class:`Regularizer` projects from the encoder output to a distribution in the latent
+    space"""
 
-    def __init__(self, d_z: int, **kwargs):
-        super().__init__()
-
-        self.d_z = d_z
-
-    @classmethod
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """the name of the regularization loss"""
+    name: str
+    """the name of the regularization loss"""
 
     @abstractmethod
-    def setup(self, d_h: int):
-        """Perform any setup necessary before using this `Regularizer`.
-
-        NOTE: this function _must_ be called at some point in the `__init__()` function.
-        """
+    def __len__(self) -> int:
+        """the size of the latent space"""
 
     @abstractmethod
     def forward(self, H: Tensor) -> Tensor:
-        """Project the output of the encoder into the latent space and regularize it"""
+        """Project the output of the encoder into its latent distribution
+        
+        Parameters
+        ----------
+        H : Tensor
+            a tensor of shape `b x d_h`, where `b` is the batch size, and `d_h` is the size encoder
+            hidden representation, containing the output of the encoder
+
+        Returns
+        -------
+        Z : Tensor
+            a tensor of shape `* x b x d_z`, where `*` is the number of parameters in the latent
+            distribution and `d_z` is the size of the latent space. `Z[0]` will always correspond
+            to the mean of the output distribution
+        """
 
     @abstractmethod
     def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
-        """Calculate both the regularized latent representation (i.e., `forward()`) and associated
-        loss of the encoder output"""
+        """Calculate both the regularized latent representation and associated regularization
+        loss
 
-    def to_config(self) -> dict:
-        return {"d_z": self.d_z}
+        Parameters
+        ----------
+        H : Tensor
+            a tensor of shape `b x d_h`, where `b` is the batch size, and `d_h` is the size encoder
+            hidden representation, containing the output of the encoder
+
+        Returns
+        -------
+        Z_reg : Tensor
+            a tensor of shape `b x d_z`, where `d_z` is the size of the latent space, containing
+            the regularized latent representation
+        loss : Tensor
+            a scalar corresponding to the regularization loss 
+        """
 
 
 @RegularizerRegistry.register("dummy")
 class DummyRegularizer(Regularizer):
-    """A :class:`DummyRegularizer` calculates no regularization loss"""
+    """A :class:`DummyRegularizer` projects directly into the latent space.
+     
+    It places no prior on the distribution in the latent space, so it has no loss (i.e., 0). The
+    output of a `DummyRegularizer` is a a tensor of shape `1 x b x d_z`
+    """
 
-    @classmethod
-    @property
-    def name(self) -> str:
-        return "ae"
+    name = "ae"
 
-    def setup(self, d_h: int):
-        self.q_h2z_mean = nn.Linear(d_h, self.d_z)
+    def __init__(self, d_h: int, d_z: int):
+        super().__init__()
 
+        self.q_h2z_mean = nn.Linear(d_h, d_z)
+
+    def __len__(self) -> int:
+        return self.q_h2z_mean.out_features
+    
     def forward(self, H: Tensor) -> Tensor:
         return self.q_h2z_mean(H)[None, :]
 
     def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
         return self(H)[0], torch.tensor(0.0)
 
+    def to_config(self) -> dict:
+        return {"d_h": self.q_h2z_mean.in_features, "d_z": len(self)}
+
 
 @RegularizerRegistry.register("vae")
 class VariationalRegularizer(DummyRegularizer):
-    """A :class:`VariationalRegularizer` uses the reparameterization trick to project into to the
-    latent space and calculates the regularization loss as the KL divergence between the output and
-    a multivariate unit normal distribution
+    """A :class:`VariationalRegularizer` projects each point into a normal distibtribution in the latent space
+    
+    The regularization loss is calculated as the KL divergence between the output and a multivariate unit normal distribution via the reparameterization trick. The output of a `VariationalRegularizer` is a a tensor of shape `2 x b x d_z`, where the 0th dimension
+    corresponds to the mean and variance (indices 0 and 1, respectively,) of a normal distribution
+    in the latent space, `b` is the size of a batch, and `d_z` is the size of the latent dimension
 
     References
     ----------
@@ -86,23 +111,15 @@ class VariationalRegularizer(DummyRegularizer):
     `b` and `d`
     """
 
-    def __init__(self, d_z: int):
-        super().__init__(d_z)
+    name = "kl"
 
-    @classmethod
-    @property
-    def name(self) -> str:
-        return "kl"
+    def __init__(self, d_h: int, d_z: int):
+        super().__init__(d_h, d_z)
 
-    def setup(self, d_h: int):
-        super().setup(d_h)
-        self.q_h2z_logvar = nn.Linear(d_h, self.d_z)
+        self.q_h2z_logvar = nn.Linear(d_h, d_z)
 
     def forward(self, H: Tensor) -> Tensor:
         return torch.stack((self.q_h2z_mean(H), self.q_h2z_logvar(H)))
-        # Z_mean, Z_logvar = self.q_h2z_mean(H), self.q_h2z_logvar(H)
-
-        # return self.reparameterize(Z_mean, Z_logvar)
 
     def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
         Z_mean, Z_logvar = self.forward(H)
@@ -122,8 +139,11 @@ class VariationalRegularizer(DummyRegularizer):
 
 @RegularizerRegistry.register("wae")
 class WassersteinRegularizer(DummyRegularizer):
-    """A :class:`WassersteinRegularizer` calculates the the regularization loss as the wasserstein
-    distance between the output and a sample from an input prior distribution
+    """A :class:`WassersteinRegularizer` projects directly into the latent space.
+    
+    It uses the input prior to calculate the the regularization loss as the wasserstein distance
+    between the output and a corresponding sample from the prior. The output of a
+    `WassersteinRegularizer` is a a tensor of shape `1 x b x d_z`.
 
     NOTE: This class does not currently support serialization with non-default values for 'kernel'
     or 'prior'
@@ -134,21 +154,19 @@ class WassersteinRegularizer(DummyRegularizer):
     2017
     """
 
+    name = "mmd"
+
     def __init__(
         self,
+        d_h: int,
         d_z: int,
         kernel: KernelFunction | None = None,
         prior: Distribution | None = None,
     ):
-        super().__init__(d_z)
+        super().__init__(d_h, d_z)
 
-        self.kernel = kernel or InverseMultiQuadraticKernel(2 * self.d_z)
+        self.kernel = kernel or InverseMultiQuadraticKernel(2 * len(self))
         self.prior = prior or Normal(0, 1)
-
-    @classmethod
-    @property
-    def name(self) -> str:
-        return "mmd"
 
     def train_step(self, H: Tensor) -> tuple[Tensor, Tensor]:
         Z = self(H)[0]
@@ -176,7 +194,7 @@ class WassersteinRegularizer(DummyRegularizer):
     def to_config(self) -> dict:
         kernel_config = {"alias": self.kernel.alias, "config": self.kernel.to_config()}
 
-        return {"d_z": self.d_z, "kernel": kernel_config, "prior": self.prior}
+        return super().to_config() | {"kernel": kernel_config, "prior": self.prior}
 
     @classmethod
     def from_config(cls, config: dict) -> Configurable:

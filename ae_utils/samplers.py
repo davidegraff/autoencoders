@@ -10,7 +10,7 @@ from torch.nn import functional as F
 from ae_utils.utils import ClassRegistry, Configurable
 from ae_utils.utils.config import warn_not_serializable
 
-__all__ = ["Sampler", "ModeSampler", "MultinomialSampler", "NoisySampler"]
+__all__ = ["Sampler", "GreedySampler", "MultinomialSampler", "NoisySampler"]
 
 SamplerRegistry = ClassRegistry()
 
@@ -44,9 +44,9 @@ class Sampler(nn.Module, Configurable):
         return {}
 
 
-@SamplerRegistry.register("mode")
-class ModeSampler(Sampler):
-    """A `ModeSampler` selects the index of the mode of the distribution"""
+@SamplerRegistry.register(["greedy", "mode"])
+class GreedySampler(Sampler):
+    """A `GreedySampler` selects the index of the mode of the distribution"""
 
     def sample(self, probs: Tensor) -> Tensor:
         return probs.argmax(-1)
