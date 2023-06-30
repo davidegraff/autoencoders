@@ -34,9 +34,9 @@ class DistanceFunction(nn.Module, Configurable):
 @DistanceFunctionRegistry.register("cosine")
 class CosineDistance(DistanceFunction):
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
-        x_norm = X.norm(dim=1, keepdim=True)
-        y_norm = Y.norm(dim=1, keepdim=True)
-        S = X @ Y.T / (x_norm @ y_norm.T)
+        X_norms = X.norm(dim=1, keepdim=True)
+        Y_norms = Y.norm(dim=1, keepdim=True)
+        S = X @ Y.T / (X_norms @ Y_norms.T)
 
         return 1 - S
 

@@ -5,7 +5,7 @@ import torch
 from torch import Tensor, nn
 
 from ae_utils.utils import Configurable, DistanceFunction, ContrastiveLoss, build_ffn
-from ae_utils.utils.distances import DistanceFunctionRegistry
+from ae_utils.utils.distances import CosineDistance, DistanceFunctionRegistry, PNormDistance
 from ae_utils.utils.registry import ClassRegistry
 
 SupervisorRegistry = ClassRegistry()
@@ -81,6 +81,9 @@ class ContrastiveSupervisor(Supervisor):
     ):
         super().__init__()
 
+        df_x = df_x or CosineDistance()
+        df_y = df_y or PNormDistance(torch.inf)
+        
         self.cont_metric = ContrastiveLoss(df_x, df_y)
 
     def forward(self, Z: Tensor, Y: Tensor) -> Tensor:

@@ -47,6 +47,7 @@ class SemisupervisedDataset(Dataset):
             )
 
         Y: Tensor = torch.from_numpy(Y).float()
+        Y = Y.view(-1, 1) if Y.ndim == 1 else Y
         mask = torch.isfinite(Y)
 
         self.dset = dset

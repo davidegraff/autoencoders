@@ -25,8 +25,8 @@ class ContrastiveLoss(LossFunction):
     ):
         super().__init__()
 
-        self.df_x = df_x or CosineDistance()
-        self.df_y = df_y or PNormDistance(torch.inf)
+        self.df_x = df_x
+        self.df_y = df_y
 
     def forward(self, X: Tensor, Y: Tensor) -> Tensor:
         return F.mse_loss(self.df_x(X, X), self.df_y(Y, Y), reduction="mean")
