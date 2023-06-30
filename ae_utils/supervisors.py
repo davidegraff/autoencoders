@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Optional
+from typing import Iterable, Optional
 
 import torch
 from torch import Tensor, nn
@@ -18,6 +18,20 @@ class Supervisor(nn.Module, Configurable):
 
         NOTE: this function _internally_ handles semisupervision. I.e., the targets `Y` should
         contain *both* labeled *and* unlabeled inputs
+        
+        Parameters
+        ----------
+        Z: Tensor
+            a tensor of shape `b x d`, where `b` is the batch size and `d` is the size of the
+            latent space, containing latent representations
+        Y: Tensor
+            a tensor of shape `b x t`, where `b` is the batch size and `t` is the number of
+            supervision targets, containing the target values
+
+        Returns
+        -------
+        loss : Tensor
+            a scalar containing the _fully reduced_ loss
         """
 
     @abstractmethod
@@ -45,7 +59,7 @@ class DummySupervisor(Supervisor):
 
 @SupervisorRegistry.register("regression")
 class RegressionSupervisor(Supervisor):
-    def __init__(self, input_dim: int, output_dim: int, hidden_dims: Optional[int] = None):
+    def __init__(self, input_dim: int, output_dim: int, hidden_dims: Optional[Iterable[int]] = None):
         super().__init__()
 
         self.ffn = build_ffn(input_dim, output_dim, hidden_dims)
@@ -76,6 +90,19 @@ class RegressionSupervisor(Supervisor):
 
 @SupervisorRegistry.register("cont")
 class ContrastiveSupervisor(Supervisor):
+    """Supervise the learning using a contrastive loss.
+     
+    The loss is of the form: L = MSE(D_xx, D_yy), where `D_xx` and `D_yy` are `n x n` matrices
+    containing the respctive input- and output-space distances between points `i` and `j`.
+    
+    Parameters
+    ----------
+    df_x : DistanceFunction | None
+        the distance function to use in the input space. If `None`, use `CosineDistance`
+    df_y : DistanceFunction | None
+        the distance funtion to use in the output space. If `None`, use `PNormDistance(inf)`. I.e.,
+        the infinity-norm.
+    """
     def __init__(
         self, df_x: Optional[DistanceFunction] = None, df_y: Optional[DistanceFunction] = None
     ):
