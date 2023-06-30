@@ -98,6 +98,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self.supervisor = supervisor or DummySupervisor()
         self.lr = lr
 
+        self.v_rec = 1
         self.v_reg = v_reg
         self.v_sup = v_sup
 
@@ -162,7 +163,7 @@ class LitCVAE(pl.LightningModule, Configurable, LoggingMixin, SaveAndLoadMixin):
         self._log_split("train", metrics)
         self.log("loss", l_rec + l_reg + l_sup)
 
-        return l_rec + self.v_reg.v * l_reg + self.v_sup.v * l_sup
+        return self.v_rec * l_rec + self.v_reg.v * l_reg + self.v_sup.v * l_sup
 
     def validation_step(self, batch: Sequence[Tensor], batch_idx):
         xs, Y = batch
